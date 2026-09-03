@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Face Recognition - Sistem Absensi Mahasiswa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .capture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 4px solid #28a745;
+            border-radius: 15px;
+            display: none;
+            animation: pulse 1s infinite;
+            box-sizing: border-box;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; border-color: #28a745; }
+            50% { opacity: 0.3; border-color: #20c997; }
+            100% { opacity: 1; border-color: #28a745; }
+        }
+        
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 10px 30px rgba(17, 153, 142, 0.4);
+        }
+        
+        .status-error {
+            background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+            box-shadow: 0 10px 30px rgba(252, 70, 107, 0.4);
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+        
+        .btn-gradient:disabled {
+            background: #6c757d;
+            transform: none;
+            box-shadow: 0 2px 5px rgba(108, 117, 125, 0.3);
+        }
+        
+        .info-panel {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .detection-status {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .detection-inactive {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+            border: 2px solid rgba(108, 117, 125, 0.2);
+        }
+        
+        .detection-active {
+            background: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+            border: 2px solid rgba(23, 162, 184, 0.3);
+        }
+        
+        .detection-success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 2px solid rgba(40, 167, 69, 0.3);
+        }
+        
+        .detection-warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border: 2px solid rgba(255, 193, 7, 0.3);
+        }
+        
+        .result-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .time-display {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .date-display {
+            font-size: 1.1rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .history-table {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand, .nav-link {
+            color: #667eea !important;
+            font-weight: 600;
+        }
+        
+        .nav-link:hover {
+            color: #764ba2 !important;
+        }
+        
+        @media (max-width: 768px) {
+            .time-display {
+                font-size: 1.5rem;
+            }
+            
+            .video-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">
+                <i class="fas fa-user-graduate me-2"></i>Sistem Absensi
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.mahasiswa') }}">
+                            <i class="fas fa-users me-1"></i>Mahasiswa
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('main.presensi_face') }}">
+                            <i class="fas fa-camera me-1"></i>Presensi Face
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 100px;">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Status Card -->
+                <div class="status-card" id="statusCard">
+                    <h2 class="mb-3">
+                        <i class="fas fa-robot me-3"></i>Presensi Real-Time dengan Face Recognition
+                    </h2>
+                    <p class="mb-0 fs-5">Sistem akan otomatis mendeteksi dan mencatat presensi wajah Anda tanpa perlu menekan tombol</p>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-card p-4">
+                    <div class="row">
+                        <!-- Camera Section -->
+                        <div class="col-lg-7">
+                            <!-- Camera Source Selection -->
+                            <div class="mb-3">
+                                <div class="btn-group w-100" role="group" aria-label="Camera Source">
+                                    <input type="radio" class="btn-check" name="cameraSource" id="webcamSource" value="webcam" checked>
+                                    <label class="btn btn-outline-primary" for="webcamSource">
+                                        <i class="fas fa-laptop"></i> Webcam
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="cameraSource" id="ipCameraSource" value="ipcamera">
+                                    <label class="btn btn-outline-primary" for="ipCameraSource">
+                                        <i class="fas fa-video"></i> IP Camera (CCTV)
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-2 text-center" id="cameraSourceInfo">
+                                    <i class="fas fa-info-circle"></i> Pilih sumber kamera sebelum memulai
+                                </small>
+                            </div>
+                            
+                            <div class="video-container">
+                                <video id="video" autoplay playsinline></video>
+                                <img id="ipCameraImage" style="width: 100%; height: auto; display: none;">
+                                <canvas id="canvas" style="display: none;"></canvas>
+                                <div class="capture-overlay" id="captureOverlay"></div>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <button id="startCamera" class="btn btn-gradient me-3">
+                                    <i class="fas fa-video me-2"></i>Mulai Real-Time Recognition
+                                </button>
+                                <button id="captureBtn" class="btn btn-success me-3" disabled>
+                                    <i class="fas fa-camera-retro me-2"></i>Capture Manual
+                                </button>
+                                <button id="debugBtn" class="btn btn-warning me-3" disabled>
+                                    <i class="fas fa-bug me-2"></i>Debug Mode
+                                </button>
+                                <button id="stopCamera" class="btn btn-secondary" disabled>
+                                    <i class="fas fa-stop me-2"></i>Stop Kamera
+                                </button>
+                            </div>
+                            
+                            <!-- Debug Result Panel -->
+                            <div id="debugPanel" class="alert alert-info mt-3" style="display: none;">
+                                <h6><i class="fas fa-microscope me-2"></i>Debug Detection Results</h6>
+                                <div id="debugInfo"></div>
+                                <img id="debugImage" class="img-fluid mt-2" style="display: none; border: 2px solid #0dcaf0; border-radius: 8px;">
+                            </div>
+                        </div>
+                        
+                        <!-- Info Panel -->
+                        <div class="col-lg-5">
+                            <div class="info-panel">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-info-circle me-2 text-primary"></i>Status Deteksi
+                                </h5>
+                                <div id="detectionStatus" class="detection-status detection-inactive">
+                                    <i class="fas fa-eye-slash me-2"></i>Kamera belum aktif
+                                </div>
+                                
+                                <!-- Processing Indicator -->
+                                <div id="processingIndicator" class="mt-2" style="display: none;">
+                                    <small class="text-muted">
+                                        <i class="fas fa-cog fa-spin me-1"></i>
+                                        Backend sedang memproses...
+                                        <span id="processingTimer" class="badge bg-info ms-1">0s</span>
+                                    </small>
+                                </div>
+                                
+                                <div id="recognitionResult" style="display: none;">
+                                    <h6 class="mt-3 mb-2">
+                                        <i class="fas fa-user-check me-2 text-success"></i>Hasil Recognition
+                                    </h6>
+                                    <div id="resultContent"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-panel text-center">
+                                <h6 class="mb-2">
+                                    <i class="fas fa-clock me-2 text-primary"></i>Waktu Sekarang
+                                </h6>
+                                <div id="currentTime" class="time-display mb-2"></div>
+                                <div id="currentDate" class="date-display"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance History -->
+                <div class="main-card p-4 mt-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2 text-primary"></i>Riwayat Presensi Hari Ini
+                        </h5>
+                        <button id="refreshHistory" class="btn btn-outline-primary btn-sm ms-auto">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div id="attendanceHistory">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Memuat riwayat presensi...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let video, ipCameraImage, canvas, stream;
+        let faceDetectionActive = false;
+        let isProcessing = false;
+        let realTimeProcessing = false;
+        let lastRecognitionTime = 0;
+        let recognitionCooldown = 10000; // 10 seconds cooldown
+        let processInterval;
+        let cameraSource = 'webcam'; // Default to webcam
+        let ipCameraInterval = null;
+        let currentAbortController = null; // For cancelling pending requests
+        let requestQueue = []; // Queue to prevent multiple simultaneous requests
+        let processingStartTime = 0; // Track when processing started
+        const REQUEST_TIMEOUT = 45000; // 45 second timeout for requests
+        
+        // ===== NEW: PERFORMANCE OPTIMIZATION VARIABLES =====
+        let displayLoopInterval = null; // Separate loop for smooth display
+        let recognitionLoopInterval = null; // Separate loop for recognition
+        let frameBuffer = null; // Buffer for latest frame
+        let lastDisplayFrame = null; // Last frame displayed
+        let frameSkipCounter = 0; // Skip frames during heavy processing
+        const DISPLAY_FPS = 15; // Display update rate (smooth visual)
+        const RECOGNITION_FPS = 0.33; // Recognition rate (every 3 seconds)
+        let isDisplaying = false; // Track display state
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            video = document.getElementById('video');
+            ipCameraImage = document.getElementById('ipCameraImage');
+            canvas = document.getElementById('canvas');
+            
+            // Check IP Camera availability on page load
+            checkIPCameraAvailability();
+            
+            // Listen to camera source changes
+            document.querySelectorAll('input[name="cameraSource"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    cameraSource = this.value;
+                    updateCameraSourceInfo();
+                    
+                    // Stop camera if running when source changes
+                    if (stream || ipCameraInterval) {
+                        stopCamera();
+                    }
+                });
+            });
+            
+            // Update time
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // Load attendance history
+            loadAttendanceHistory();
+            
+            // Event listeners
+            document.getElementById('startCamera').addEventListener('click', startCamera);
+            document.getElementById('captureBtn').addEventListener('click', captureAndRecognize);
+            document.getElementById('debugBtn').addEventListener('click', debugDetection);
+            document.getElementById('stopCamera').addEventListener('click', stopCamera);
+            document.getElementById('refreshHistory').addEventListener('click', loadAttendanceHistory);
+        });
+        
+        function updateCameraSourceInfo() {
+            const infoElement = document.getElementById('cameraSourceInfo');
+            if (cameraSource === 'webcam') {
+                infoElement.innerHTML = '<i class="fas fa-info-circle"></i> Menggunakan webcam perangkat';
+            } else {
+                infoElement.innerHTML = '<i class="fas fa-info-circle"></i> Menggunakan IP Camera (CCTV) - RTSP Stream';
+            }
+        }
+        
+        function checkIPCameraAvailability() {
+            fetch('/presensi_face/check_ip_camera')
+                .then(response => response.json())
+                .then(data => {
+                    const ipCameraRadio = document.getElementById('ipCameraSource');
+                    const ipCameraLabel = ipCameraRadio.parentElement;
+                    
+                    if (data.available) {
+                        ipCameraRadio.disabled = false;
+                        ipCameraLabel.title = 'IP Camera tersedia dan siap digunakan';
+                        console.log('✅ IP Camera detected and ready');
+                    } else {
+                        // Don't disable the button, just warn the user
+                        ipCameraRadio.disabled = false; // Allow user to try anyway
+                        ipCameraLabel.title = '⚠️ ' + data.message + ' - Anda masih bisa mencoba';
+                        console.warn('⚠️ IP Camera check failed:', data.message);
+                    }
+                })
+                .catch(error => {
+                    // Don't disable the button on error, let user try
+                    const ipCameraRadio = document.getElementById('ipCameraSource');
+                    ipCameraRadio.disabled = false;
+                    ipCameraRadio.parentElement.title = '⚠️ Tidak dapat mengecek IP Camera - Anda masih bisa mencoba';
+                    console.error('❌ Error checking IP camera availability:', error);
+                });
+        }
+        
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('id-ID');
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+        
+        async function startCamera() {
+            try {
+                if (cameraSource === 'webcam') {
+                    // Use webcam
+                    const constraints = {
+                        video: { 
+                            width: { ideal: 640 }, 
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    };
+                    
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    ipCameraImage.style.display = 'none';
+                    
+                    // Wait for video to be ready
+                    video.addEventListener('loadedmetadata', () => {
+                        // Update UI
+                        document.getElementById('startCamera').disabled = true;
+                        document.getElementById('captureBtn').style.display = 'none'; // Hide manual capture button
+                        document.getElementById('debugBtn').disabled = false; // Enable debug button
+                        document.getElementById('stopCamera').disabled = false;
+                        
+                        updateDetectionStatus('Kamera aktif - Memulai deteksi real-time', 'active');
+                        
+                        // Start face detection simulation
+                        startFaceDetection();
+                        
+                        // Start real-time processing
+                        startRealTimeProcessing();
+                    });
+                } else {
+                    // Use IP Camera
+                    console.log('🎥 Starting IP Camera...');
+                    
+                    video.style.display = 'none';
+                    ipCameraImage.style.display = 'block';
+                    
+                    // Clear previous state to prevent freeze
+                    ipCameraImage.onload = null;
+                    ipCameraImage.onerror = null;
+                    ipCameraImage.src = '';
+                    
+                    // Add error handler for IP camera image
+                    ipCameraImage.onerror = function() {
+                        console.error('❌ Failed to load IP Camera feed');
+                        updateDetectionStatus('Gagal memuat feed IP Camera. Periksa koneksi dan konfigurasi RTSP.', 'error');
+                        showAlert('error', 'Tidak dapat terhubung ke IP Camera. Pastikan CCTV online dan RTSP_URL dikonfigurasi dengan benar di file .env');
+                        stopCamera();
+                    };
+                    
+                    // Add load handler
+                    ipCameraImage.onload = function() {
+                        console.log('✅ IP Camera feed loaded successfully');
+                        updateDetectionStatus('IP Camera aktif - Mendeteksi wajah...', 'active');
+                    };
+                    
+                    // CRITICAL FIX: Use MJPEG stream for continuous display
+                    // This keeps video running even during backend processing
+                    ipCameraImage.src = '/presensi_face/ip_camera_feed';
+                    
+                    console.log('📡 IP Camera MJPEG stream started');
+                    
+                    // Force image to reload continuously
+                    ipCameraImage.onload = function() {
+                        // Image loaded successfully, stream is working
+                        if (!realTimeProcessing) return;
+                        
+                        // Add small delay to prevent too fast reload (let browser handle it)
+                        setTimeout(() => {
+                            if (ipCameraImage.complete) {
+                                // Stream is working fine
+                            }
+                        }, 100);
+                    };
+                    
+                    // Update UI
+                    document.getElementById('startCamera').disabled = true;
+                    document.getElementById('captureBtn').style.display = 'none';
+                    document.getElementById('debugBtn').disabled = false; // Enable debug button for IP camera
+                    document.getElementById('stopCamera').disabled = false;
+                    
+                    // Start IP camera frame capture for face detection (SEPARATE from display)
+                    startIPCameraDetection();
+                    
+                    // Start real-time processing
+                    startRealTimeProcessing();
+                    
+                    console.log('✅ IP Camera started successfully');
+                }
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                updateDetectionStatus('Gagal mengakses kamera: ' + error.message, 'error');
+                showAlert('error', 'Gagal mengakses kamera. Pastikan kamera tersedia dan berikan izin akses.');
+            }
+        }
+        
+        function stopCamera() {
+            console.log('🛑 Stopping camera...');
+            
+            // Stop webcam stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            // Stop IP camera detection interval
+            if (ipCameraInterval) {
+                clearInterval(ipCameraInterval);
+                ipCameraInterval = null;
+            }
+            
+            // Clear IP camera image source properly to prevent freeze
+            const ipCameraImage = document.getElementById('ipCameraImage');
+            ipCameraImage.onload = null;
+            ipCameraImage.onerror = null;
+            ipCameraImage.src = ''; // Clear source
+            ipCameraImage.style.display = 'none';
+            
+            // Reset video element
+            const video = document.getElementById('video');
+            video.srcObject = null;
+            video.style.display = 'none';
+            
+            // Stop all processing
+            faceDetectionActive = false;
+            realTimeProcessing = false;
+            isProcessing = false;
+            processingStartTime = 0;
+            
+            // Cancel any pending request
+            if (currentAbortController) {
+                currentAbortController.abort();
+                currentAbortController = null;
+            }
+            
+            // Clear processing interval
+            if (processInterval) {
+                clearInterval(processInterval);
+                processInterval = null;
+            }
+            
+            // Reset UI
+            document.getElementById('startCamera').disabled = false;
+            document.getElementById('captureBtn').style.display = 'inline-block';
+            document.getElementById('captureBtn').disabled = true;
+            document.getElementById('debugBtn').disabled = true;
+            document.getElementById('stopCamera').disabled = true;
+            
+            updateDetectionStatus('Kamera berhenti', 'inactive');
+            console.log('✅ Camera stopped successfully - All loops terminated');
+        }
+        
+        async function debugDetection() {
+            console.log('[Debug Mode] Starting debug detection...');
+            
+            const debugBtn = document.getElementById('debugBtn');
+            const debugPanel = document.getElementById('debugPanel');
+            const debugInfo = document.getElementById('debugInfo');
+            const debugImage = document.getElementById('debugImage');
+            
+            debugBtn.disabled = true;
+            debugBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+            
+            try {
+                const canvas = document.getElementById('canvas');
+                const video = document.getElementById('video');
+                const ipCameraImage = document.getElementById('ipCameraImage');
+                
+                // Determine source and capture frame
+                if (cameraSource === 'webcam' && video.srcObject) {
+                    // Capture from webcam
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                } else if (cameraSource === 'ipcamera' && ipCameraImage.src) {
+                    // Capture from IP camera
+                    canvas.width = ipCameraImage.naturalWidth;
+                    canvas.height = ipCameraImage.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(ipCameraImage, 0, 0);
+                } else {
+                    throw new Error('No active camera source');
+                }
+                
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                
+                // Send to debug endpoint
+                const formData = new FormData();
+                formData.append('image', blob, 'debug.jpg');
+                
+                const response = await fetch('/face_recognition/debug_detection', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show debug panel
+                    debugPanel.style.display = 'block';
+                    
+                    // Display debug image with bounding boxes
+                    debugImage.src = data.debug_image;
+                    debugImage.style.display = 'block';
+                    
+                    // Build info HTML
+                    let infoHTML = `
+                        <div class="mb-2">
+                            <strong>🔍 Detection Method:</strong> <span class="badge bg-info">${data.detection_method || 'Unknown'}</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>👤 Wajah Terdeteksi:</strong> ${data.faces_detected}
+                        </div>
+                    `;
+                    
+                    // Show detection details
+                    if (data.detection_info && data.detection_info.length > 0) {
+                        infoHTML += '<div class="mt-2"><strong>Detail Deteksi:</strong><ul class="mb-0">';
+                        data.detection_info.forEach(face => {
+                            const matchIcon = face.matched ? '✅' : '❌';
+                            const matchText = face.matched ? 
+                                `<span class="text-success">MATCH: ${face.match} (${face.student_id})</span>` : 
+                                `<span class="text-danger">NO MATCH</span>`;
+                            
+                            infoHTML += `
+                                <li>
+                                    <strong>Face #${face.face_number}</strong><br>
+                                    Size: ${face.size_percentage} (${face.size_category})<br>
+                                    ${face.confidence ? `Confidence: ${face.confidence}<br>` : ''}
+                                    ${face.distance ? `Distance: ${face.distance}<br>` : ''}
+                                    ${matchIcon} ${matchText}
+                                </li>
+                            `;
+                        });
+                        infoHTML += '</ul></div>';
+                    }
+                    
+                    // Show recommendations
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        infoHTML += '<div class="mt-3"><strong>Rekomendasi:</strong><ul class="mb-0">';
+                        data.recommendations.forEach(rec => {
+                            infoHTML += `<li>${rec}</li>`;
+                        });
+                        infoHTML += '</ul></div>';
+                    }
+                    
+                    debugInfo.innerHTML = infoHTML;
+                    
+                    console.log('[Debug Mode] Analysis complete:', data);
+                    showAlert('info', `Debug: ${data.faces_detected} wajah terdeteksi. Lihat detail di bawah.`);
+                } else {
+                    throw new Error(data.message || 'Debug detection failed');
+                }
+                
+            } catch (error) {
+                console.error('[Debug Mode] Error:', error);
+                showAlert('error', 'Debug gagal: ' + error.message);
+                debugPanel.style.display = 'none';
+            } finally {
+                debugBtn.disabled = false;
+                debugBtn.innerHTML = '<i class="fas fa-bug me-2"></i>Debug Mode';
+            }
+        }
+        
+        // IP Camera detection loop - ASYNC NON-BLOCKING VERSION
+        function startIPCameraDetection() {
+            console.log('[IP Camera] 🚀 Starting ASYNC detection loop (non-blocking)...');
+            
+            // Single loop for starting async recognition jobs
+            // Recognition runs in background, video stays smooth!
+            ipCameraInterval = setInterval(async function() {
+                // Can trigger multiple jobs - they run in parallel!
+                if (realTimeProcessing) {
+                    console.log('[IP Camera] Starting async recognition job...');
+                    
+                    try {
+                        // START async job (returns immediately!)
+                        const response = await fetch('/presensi_face/capture_ip_frame', {
+                            method: 'POST'
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.job_id) {
+                            console.log('[IP Camera] ✅ Job started:', data.job_id);
+                            // Poll for result in background (doesn't block!)
+                            pollRecognitionResult(data.job_id);
+                        } else {
+                            console.warn('[IP Camera] Failed to start job:', data.message);
+                        }
+                    } catch (error) {
+                        console.error('[IP Camera] Error starting job:', error);
+                    }
+                }
+            }, 2000); // Every 2 seconds - start new recognition job
+        }
+        
+        // NEW: Poll for async recognition result (NON-BLOCKING!)
+        async function pollRecognitionResult(jobId) {
+            console.log('[Poll] 📡 Polling result for job:', jobId);
+            
+            const maxAttempts = 30; // 30 attempts = 30 seconds max wait
+            let attempts = 0;
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`/presensi_face/get_recognition_result/${jobId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        // Job completed!
+                        clearInterval(pollInterval);
+                        console.log('[Poll] ✅ Job completed:', jobId);
+                        
+                        if (data.success) {
+                            // Recognition successful!
+                            console.log('[Poll] ✅ Recognition SUCCESS');
+                            console.log('[Poll] Student:', data.student);
+                            console.log('[Poll] Confidence:', data.confidence);
+                            
+                            if (data.multiple_faces) {
+                                console.log('[Poll] Multiple faces:', data.faces_detected);
+                                console.log('[Poll] All faces:', data.all_faces);
+                            }
+                            
+                            lastRecognitionTime = Date.now();
+                            showRecognitionResultAsync(data);
+                            
+                            const faceCount = data.faces_detected || 1;
+                            const statusMessage = data.multiple_faces ? 
+                                `✅ ${faceCount} wajah berhasil diidentifikasi` : 
+                                `✅ Presensi berhasil: ${data.student.name}`;
+                            
+                            updateStatusCard('success', statusMessage);
+                            loadAttendanceHistory();
+                            updateDetectionStatus('Presensi berhasil! Menunggu deteksi berikutnya...', 'success', faceCount);
+                            
+                        } else {
+                            // Recognition failed
+                            console.log('[Poll] ⚠️ Recognition FAILED:', data.message);
+                            updateDetectionStatus(data.message || 'Wajah tidak dikenali', 'warning');
+                        }
+                        
+                    } else if (data.status === 'processing') {
+                        // Still processing...
+                        console.log('[Poll] ⏳ Still processing... (attempt', attempts, '/', maxAttempts, ')');
+                        
+                        // Update UI to show processing
+                        if (attempts === 1) {
+                            updateDetectionStatus('🔍 Memproses wajah...', 'active');
+                        }
+                        
+                    } else {
+                        // Unknown status or error
+                        console.warn('[Poll] ❌ Unknown status:', data);
+                        clearInterval(pollInterval);
+                        updateDetectionStatus('Error: Status tidak dikenali', 'error');
+                    }
+                    
+                    // Timeout after max attempts
+                    if (attempts >= maxAttempts) {
+                        console.warn('[Poll] ⏱️ Timeout after', maxAttempts, 'attempts');
+                        clearInterval(pollInterval);
+                        updateDetectionStatus('Timeout: Proses terlalu lama', 'warning');
+                    }
+                    
+                } catch (error) {
+                    console.error('[Poll] ❌ Error polling result:', error);
+                    clearInterval(pollInterval);
+                    updateDetectionStatus('Error: ' + error.message, 'error');
+                }
+                
+            }, 1000); // Poll every 1 second
+        }
+        
+        // Show async recognition result (similar to existing function)
+        function showRecognitionResultAsync(result) {
+            // Reuse existing showRecognitionResult function
+            showRecognitionResult(result);
+        }
+        
+        // NEW: Recognize from blob directly (no canvas needed)
+        async function captureAndRecognizeFromBlob(blob) {
+            // Check cooldown period
+            const now = Date.now();
+            if (now - lastRecognitionTime < recognitionCooldown) {
+                const remainingTime = Math.ceil((recognitionCooldown - (now - lastRecognitionTime)) / 1000);
+                console.log('[Recognition] Cooldown active -', remainingTime, 'seconds remaining');
+                return;
+            }
+            
+            // LOCK: Set processing flag IMMEDIATELY
+            isProcessing = true;
+            processingStartTime = Date.now();
+            console.log('[Recognition] 🔒 LOCKED - Starting recognition');
+            showProcessingIndicator();
+            updateDetectionStatus('Memproses wajah...', 'active');
+            
+            // Cancel any previous request
+            if (currentAbortController) {
+                console.log('[Recognition] Aborting previous request...');
+                currentAbortController.abort();
+            }
+            
+            // Create new abort controller
+            currentAbortController = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.warn('[Recognition] ⏱️ Request timeout after', REQUEST_TIMEOUT/1000, 'seconds');
+                currentAbortController.abort();
+            }, REQUEST_TIMEOUT);
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', blob, 'ipcamera_capture.jpg');
+                
+                console.log('[Recognition] 📤 Sending request to backend...');
+                const requestStart = Date.now();
+                
+                const response = await fetch('/face_recognition/recognize_attendance', {
+                    method: 'POST',
+                    body: formData,
+                    signal: currentAbortController.signal
+                });
+                
+                const requestDuration = Date.now() - requestStart;
+                console.log('[Recognition] 📥 Response received in', requestDuration, 'ms');
+                
+                clearTimeout(timeoutId);
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('[Recognition] ✅ SUCCESS:', result.message);
+                    if (result.multiple_faces) {
+                        console.log('[Recognition] Multiple faces:', result.faces_detected);
+                        console.log('[Recognition] Students:', result.all_students);
+                    } else {
+                        console.log('[Recognition] Student:', result.student);
+                        console.log('[Recognition] Confidence:', result.confidence);
+                    }
+                    
+                    lastRecognitionTime = Date.now();
+                    showRecognitionResult(result);
+                    
+                    const faceCount = result.faces_detected || 1;
+                    const statusMessage = result.multiple_faces ? 
+                        `✅ ${faceCount} wajah berhasil diidentifikasi` : 
+                        `✅ ${result.message}`;
+                    
+                    updateStatusCard('success', statusMessage);
+                    loadAttendanceHistory();
+                    showAlert('success', `Presensi otomatis berhasil: ${result.message}`);
+                    updateDetectionStatus('Presensi berhasil! Menunggu deteksi berikutnya...', 'success', faceCount);
+                } else {
+                    console.log('[Recognition] ⚠️ FAILED:', result.message);
+                    updateDetectionStatus(result.message || 'Wajah tidak dikenali', 'warning');
+                    showRecognitionResult(result);
+                }
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.warn('[Recognition] Request aborted (timeout or cancelled)');
+                    updateDetectionStatus('Request dibatalkan, mencoba lagi...', 'warning');
+                } else {
+                    console.error('[Recognition] ❌ Network error:', error);
+                    updateDetectionStatus('Kesalahan jaringan, mencoba lagi...', 'error');
+                }
+                clearTimeout(timeoutId);
+            } finally {
+                // UNLOCK: Always release the lock
+                const totalElapsed = Date.now() - processingStartTime;
+                console.log('[Recognition] 🔓 UNLOCKED - Total processing time:', totalElapsed, 'ms');
+                hideProcessingIndicator();
+                isProcessing = false;
+                processingStartTime = 0;
+                currentAbortController = null;
+            }
+        }
+        
+        // LEGACY: This function is no longer used with new dual-loop system
+        // Keeping for backward compatibility reference only
+        /*
+        function processIPCameraFrame(frameBase64) {
+            const img = new Image();
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                if (realTimeProcessing && !isProcessing) {
+                    captureAndRecognizeFromCanvas();
+                }
+            };
+            img.onerror = function() {
+                console.error('Failed to load IP camera frame');
+            };
+            img.src = 'data:image/jpeg;base64,' + frameBase64;
+        }
+        */
+        
+        function startFaceDetection() {
+            faceDetectionActive = true;
+            detectFace();
+        }
+        
+        function detectFace() {
+            if (!faceDetectionActive || !stream) return;
+            
+            // Simulate face detection (70% chance of detection)
+            const detected = Math.random() > 0.3;
+            
+            if (detected) {
+                updateDetectionStatus('Wajah terdeteksi - Memproses real-time...', 'success');
+            } else {
+                updateDetectionStatus('Mencari wajah...', 'warning');
+            }
+            
+            setTimeout(detectFace, 1500);
+        }
+        
+        function startRealTimeProcessing() {
+            realTimeProcessing = true;
+            updateDetectionStatus('Memulai pemrosesan real-time...', 'active');
+            
+            // Process frames every 3 seconds
+            processInterval = setInterval(() => {
+                if (realTimeProcessing && stream && !isProcessing) {
+                    processFrameForRecognition();
+                }
+            }, 3000);
+        }
+        
+        async function processFrameForRecognition() {
+            // CRITICAL: Double-check if already processing
+            if (isProcessing || !realTimeProcessing) {
+                if (isProcessing) {
+                    const elapsed = Date.now() - processingStartTime;
+                    console.log('[Webcam Recognition] ⚠️ Already processing for', Math.floor(elapsed/1000), 'seconds - SKIPPING');
+                }
+                return;
+            }
+            
+            // Check cooldown period
+            const now = Date.now();
+            if (now - lastRecognitionTime < recognitionCooldown) {
+                const remainingTime = Math.ceil((recognitionCooldown - (now - lastRecognitionTime)) / 1000);
+                console.log('[Webcam Recognition] Cooldown active -', remainingTime, 'seconds remaining');
+                updateDetectionStatus(`Menunggu ${remainingTime} detik sebelum deteksi berikutnya...`, 'warning');
+                return;
+            }
+            
+            // LOCK: Set processing flag IMMEDIATELY
+            isProcessing = true;
+            processingStartTime = Date.now();
+            console.log('[Webcam Recognition] 🔒 LOCKED - Starting recognition at', new Date().toLocaleTimeString());
+            showProcessingIndicator();
+            updateDetectionStatus('Memproses frame untuk pengenalan wajah...', 'active');
+            
+            // Cancel any previous request
+            if (currentAbortController) {
+                console.log('[Webcam Recognition] Aborting previous request...');
+                currentAbortController.abort();
+            }
+            
+            // Create new abort controller
+            currentAbortController = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.warn('[Webcam Recognition] ⏱️ Request timeout after', REQUEST_TIMEOUT/1000, 'seconds');
+                currentAbortController.abort();
+            }, REQUEST_TIMEOUT);
+            
+            try {
+                // Capture current frame
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                
+                // Convert to blob
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        console.error('[Webcam Recognition] ❌ Failed to capture frame');
+                        forceResetProcessing();
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('image', blob, 'realtime_capture.jpg');
+                    
+                    try {
+                        console.log('[Webcam Recognition] 📤 Sending request to backend...');
+                        const requestStart = Date.now();
+                        
+                        const response = await fetch('/face_recognition/recognize_attendance', {
+                            method: 'POST',
+                            body: formData,
+                            signal: currentAbortController.signal
+                        });
+                        
+                        const requestDuration = Date.now() - requestStart;
+                        console.log('[Webcam Recognition] 📥 Response received in', requestDuration, 'ms');
+                        
+                        clearTimeout(timeoutId);
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // Successful recognition
+                            console.log('[Webcam Recognition] ✅ SUCCESS:', result.message);
+                            lastRecognitionTime = Date.now();
+                            showRecognitionResult(result);
+                            updateStatusCard('success', `✅ ${result.message}`);
+                            loadAttendanceHistory(); // Refresh history
+                            showAlert('success', `Presensi otomatis berhasil: ${result.message}`);
+                            updateDetectionStatus('Presensi berhasil! Menunggu deteksi berikutnya...', 'success');
+                        } else {
+                            // Recognition failed, continue trying
+                            console.log('[Webcam Recognition] ⚠️ No match:', result.message);
+                            console.log('[Webcam Recognition] Reason:', result.reason || 'unknown');
+                            console.log('[Webcam Recognition] Confidence:', result.confidence);
+                            
+                            // Show detailed error message
+                            const errorMsg = result.message || 'Wajah tidak dikenali';
+                            updateDetectionStatus(errorMsg, 'warning');
+                            
+                            // Show result card even for failures to give user feedback
+                            showRecognitionResult(result);
+                        }
+                        
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            console.warn('[Webcam Recognition] Request was aborted (timeout or cancelled)');
+                            updateDetectionStatus('Request dibatalkan (timeout), mencoba lagi...', 'warning');
+                        } else {
+                            console.error('[Webcam Recognition] ❌ Network error:', error);
+                            updateDetectionStatus('Kesalahan jaringan, mencoba lagi...', 'error');
+                        }
+                        clearTimeout(timeoutId);
+                    } finally {
+                        // UNLOCK: Always release the lock
+                        const totalElapsed = Date.now() - processingStartTime;
+                        console.log('[Webcam Recognition] 🔓 UNLOCKED - Total processing time:', totalElapsed, 'ms');
+                        hideProcessingIndicator();
+                        isProcessing = false;
+                        processingStartTime = 0;
+                        currentAbortController = null;
+                    }
+                }, 'image/jpeg', 0.8);
+                
+            } catch (error) {
+                console.error('[Webcam Recognition] ❌ Frame processing error:', error);
+                updateDetectionStatus('Kesalahan pemrosesan frame', 'error');
+                forceResetProcessing();
+            }
+        }
+        
+        // NEW: Capture and recognize from canvas (for IP Camera)
+        async function captureAndRecognizeFromCanvas() {
+            // CRITICAL: Double-check if already processing
+            if (isProcessing) {
+                const elapsed = Date.now() - processingStartTime;
+                console.log('[Recognition] ⚠️ Already processing for', Math.floor(elapsed/1000), 'seconds - SKIPPING');
+                return;
+            }
+            
+            // Check cooldown period
+            const now = Date.now();
+            if (now - lastRecognitionTime < recognitionCooldown) {
+                const remainingTime = Math.ceil((recognitionCooldown - (now - lastRecognitionTime)) / 1000);
+                console.log('[Recognition] Cooldown active -', remainingTime, 'seconds remaining');
+                updateDetectionStatus(`Menunggu ${remainingTime} detik sebelum deteksi berikutnya...`, 'warning');
+                return;
+            }
+            
+            // LOCK: Set processing flag IMMEDIATELY
+            isProcessing = true;
+            processingStartTime = Date.now();
+            console.log('[Recognition] 🔒 LOCKED - Starting recognition from IP Camera at', new Date().toLocaleTimeString());
+            showProcessingIndicator();
+            updateDetectionStatus('Memproses frame IP Camera untuk pengenalan wajah...', 'active');
+            
+            // Cancel any previous request
+            if (currentAbortController) {
+                console.log('[Recognition] Aborting previous request...');
+                currentAbortController.abort();
+            }
+            
+            // Create new abort controller
+            currentAbortController = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.warn('[Recognition] ⏱️ Request timeout after', REQUEST_TIMEOUT/1000, 'seconds');
+                currentAbortController.abort();
+            }, REQUEST_TIMEOUT);
+            
+            try {
+                // Canvas already has the IP camera frame drawn by processIPCameraFrame
+                // Just convert canvas to blob
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        console.error('[Recognition] ❌ Failed to convert canvas to blob');
+                        forceResetProcessing();
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('image', blob, 'ipcamera_capture.jpg');
+                    
+                    try {
+                        console.log('[Recognition] 📤 Sending request to backend...');
+                        const requestStart = Date.now();
+                        
+                        const response = await fetch('/face_recognition/recognize_attendance', {
+                            method: 'POST',
+                            body: formData,
+                            signal: currentAbortController.signal
+                        });
+                        
+                        const requestDuration = Date.now() - requestStart;
+                        console.log('[Recognition] 📥 Response received in', requestDuration, 'ms');
+                        
+                        clearTimeout(timeoutId);
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // Successful recognition
+                            console.log('[Recognition] ✅ SUCCESS:', result.message);
+                            if (result.multiple_faces) {
+                                console.log('[Recognition] Multiple faces:', result.faces_detected);
+                                console.log('[Recognition] Students:', result.all_students);
+                            } else {
+                                console.log('[Recognition] Student:', result.student);
+                                console.log('[Recognition] Confidence:', result.confidence);
+                            }
+                            
+                            lastRecognitionTime = Date.now();
+                            showRecognitionResult(result);
+                            
+                            // Handle status messages for multiple faces
+                            const faceCount = result.faces_detected || 1;
+                            const statusMessage = result.multiple_faces ? 
+                                `✅ ${faceCount} wajah berhasil diidentifikasi` : 
+                                `✅ ${result.message}`;
+                            
+                            updateStatusCard('success', statusMessage);
+                            loadAttendanceHistory(); // Refresh history
+                            showAlert('success', `Presensi otomatis berhasil dari IP Camera: ${result.message}`);
+                            updateDetectionStatus('Presensi berhasil! Menunggu deteksi berikutnya...', 'success', faceCount);
+                        } else {
+                            // Recognition failed, continue trying
+                            console.log('[Recognition] ⚠️ FAILED:', result.message);
+                            console.log('[Recognition] Reason:', result.reason || 'unknown');
+                            console.log('[Recognition] Confidence:', result.confidence);
+                            console.log('[Recognition] Full result:', result);
+                            
+                            // Show detailed error message from backend
+                            const errorMsg = result.message || 'Wajah tidak dikenali dari IP Camera';
+                            updateDetectionStatus(errorMsg, 'warning');
+                            
+                            // Show result card even for failures to give user feedback
+                            showRecognitionResult(result);
+                        }
+                        
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            console.warn('[Recognition] Request was aborted (timeout or cancelled)');
+                            updateDetectionStatus('Request dibatalkan (timeout), mencoba lagi...', 'warning');
+                        } else {
+                            console.error('[Recognition] ❌ Network error:', error);
+                            updateDetectionStatus('Kesalahan jaringan, mencoba lagi...', 'error');
+                        }
+                        clearTimeout(timeoutId);
+                    } finally {
+                        // UNLOCK: Always release the lock
+                        const totalElapsed = Date.now() - processingStartTime;
+                        console.log('[Recognition] 🔓 UNLOCKED - Total processing time:', totalElapsed, 'ms');
+                        hideProcessingIndicator();
+                        isProcessing = false;
+                        processingStartTime = 0;
+                        currentAbortController = null;
+                    }
+                }, 'image/jpeg', 0.8);
+                
+            } catch (error) {
+                console.error('[Recognition] ❌ Canvas processing error:', error);
+                updateDetectionStatus('Kesalahan pemrosesan frame IP Camera', 'error');
+                forceResetProcessing();
+            }
+        }
+        
+        // Helper function to force reset processing state
+        function forceResetProcessing() {
+            console.warn('[Recognition] 🔓 FORCE RESET - Unlocking processing state');
+            isProcessing = false;
+            processingStartTime = 0;
+            if (currentAbortController) {
+                currentAbortController.abort();
+                currentAbortController = null;
+            }
+            hideProcessingIndicator();
+            updateDetectionStatus('Reset - Siap untuk deteksi berikutnya...', 'active');
+        }
+        
+        // Show processing indicator with timer
+        function showProcessingIndicator() {
+            const indicator = document.getElementById('processingIndicator');
+            const timer = document.getElementById('processingTimer');
+            indicator.style.display = 'block';
+            
+            // Update timer every second
+            const startTime = Date.now();
+            const timerInterval = setInterval(() => {
+                if (!isProcessing) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timer.textContent = elapsed + 's';
+                
+                // Change color if taking too long
+                if (elapsed > 30) {
+                    timer.className = 'badge bg-danger ms-1';
+                } else if (elapsed > 15) {
+                    timer.className = 'badge bg-warning ms-1';
+                } else {
+                    timer.className = 'badge bg-info ms-1';
+                }
+            }, 1000);
+        }
+        
+        // Hide processing indicator
+        function hideProcessingIndicator() {
+            const indicator = document.getElementById('processingIndicator');
+            indicator.style.display = 'none';
+        }
+        
+        async function captureAndRecognize() {
+            if (isProcessing) return;
+            
+            isProcessing = true;
+            const captureBtn = document.getElementById('captureBtn');
+            const originalText = captureBtn.innerHTML;
+            
+            // Show loading
+            captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
+            captureBtn.disabled = true;
+            
+            // Show capture effect
+            const overlay = document.getElementById('captureOverlay');
+            overlay.style.display = 'block';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 1000);
+            
+            try {
+                // Check camera source and capture accordingly
+                if (cameraSource === 'ipcamera') {
+                    // IP Camera: Canvas already has the frame from the feed
+                    // Just convert to blob
+                    canvas.toBlob(async (blob) => {
+                        await processCapturedBlob(blob, captureBtn, originalText);
+                    }, 'image/jpeg', 0.8);
+                } else {
+                    // Webcam: Capture from video element
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    // Convert to blob
+                    canvas.toBlob(async (blob) => {
+                        await processCapturedBlob(blob, captureBtn, originalText);
+                    }, 'image/jpeg', 0.8);
+                }
+                
+            } catch (error) {
+                console.error('Capture error:', error);
+                updateStatusCard('error', '❌ Gagal mengambil foto');
+                showAlert('error', 'Gagal mengambil foto dari kamera.');
+                captureBtn.innerHTML = originalText;
+                captureBtn.disabled = false;
+                document.getElementById('debugBtn').disabled = false;
+                isProcessing = false;
+            }
+        }
+        
+        // Helper function to process captured blob
+        async function processCapturedBlob(blob, captureBtn, originalText) {
+            if (!blob) {
+                showAlert('error', 'Failed to capture image');
+                captureBtn.innerHTML = originalText;
+                captureBtn.disabled = false;
+                isProcessing = false;
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', blob, 'attendance_capture.jpg');
+            
+            try {
+                const response = await fetch('/face_recognition/recognize_attendance', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showRecognitionResult(result);
+                    updateStatusCard('success', `✅ ${result.message}`);
+                    loadAttendanceHistory(); // Refresh history
+                    showAlert('success', result.message);
+                } else {
+                    showRecognitionResult(result);
+                    updateStatusCard('error', `❌ ${result.message}`);
+                    showAlert('warning', result.message);
+                }
+                
+            } catch (error) {
+                console.error('Network error:', error);
+                updateStatusCard('error', '❌ Terjadi kesalahan jaringan');
+                showAlert('error', 'Terjadi kesalahan saat memproses presensi. Silakan coba lagi.');
+            }
+            
+            // Reset button after delay
+            setTimeout(() => {
+                captureBtn.innerHTML = originalText;
+                captureBtn.disabled = false;
+                isProcessing = false;
+            }, 2000);
+        }
+        
+        function updateDetectionStatus(message, type, faceCount = null) {
+            const statusEl = document.getElementById('detectionStatus');
+            let icon, className;
+            
+            // Remove all status classes
+            statusEl.className = 'detection-status';
+            
+            switch(type) {
+                case 'success':
+                    icon = 'fas fa-check-circle';
+                    statusEl.classList.add('detection-success');
+                    break;
+                case 'warning':
+                    icon = 'fas fa-exclamation-triangle';
+                    statusEl.classList.add('detection-warning');
+                    break;
+                case 'error':
+                    icon = 'fas fa-times-circle';
+                    statusEl.classList.add('detection-error');
+                    break;
+                case 'active':
+                    icon = 'fas fa-spinner fa-spin'; // Show spinner when actively processing
+                    statusEl.classList.add('detection-active');
+                    break;
+                default:
+                    icon = 'fas fa-eye-slash';
+                    statusEl.classList.add('detection-inactive');
+            }
+            
+            // Add face count badge for multiple faces
+            let faceCountBadge = '';
+            if (faceCount && faceCount > 1) {
+                faceCountBadge = ` <span class="badge bg-primary ms-2">${faceCount} Wajah</span>`;
+            }
+            
+            statusEl.innerHTML = `<i class="${icon} me-2"></i>${message}${faceCountBadge}`;
+            
+            // Add timestamp for debugging
+            const timestamp = new Date().toLocaleTimeString();
+            console.log(`[Status Update ${timestamp}] ${type.toUpperCase()}: ${message}`);
+        }
+        
+        function showRecognitionResult(result) {
+            const resultDiv = document.getElementById('recognitionResult');
+            const contentDiv = document.getElementById('resultContent');
+            
+            if (result.success && result.student) {
+                // Check if multiple faces detected
+                // FIX: Backend sends 'all_faces' not 'all_students'
+                const allFaces = result.all_faces || result.all_students || [];
+                if (result.multiple_faces && allFaces.length > 1) {
+                    // MULTIPLE FACES - Beautiful grid layout
+                    const facesCount = allFaces.length;
+                    console.log('[UI] Rendering multiple faces:', facesCount);
+                    console.log('[UI] All faces data:', allFaces);
+                    
+                    let facesHTML = `
+                        <div class="alert alert-success mb-2 p-2">
+                            <strong><i class="fas fa-users me-1"></i> ${facesCount} Wajah Terdeteksi</strong>
+                            <small class="d-block text-muted">Semua berhasil diidentifikasi</small>
+                        </div>
+                        <div class="row g-2">
+                    `;
+                    
+                    allFaces.forEach((student, index) => {
+                        const confidencePercent = (student.confidence * 100).toFixed(1);
+                        const confidenceClass = student.confidence > 0.70 ? 'success' : student.confidence > 0.55 ? 'info' : 'warning';
+                        const borderColor = student.confidence > 0.70 ? '#28a745' : student.confidence > 0.55 ? '#17a2b8' : '#ffc107';
+                        
+                        facesHTML += `
+                            <div class="col-${facesCount <= 2 ? '6' : '4'}">
+                                <div class="card h-100" style="border-left: 4px solid ${borderColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <div class="rounded-circle bg-${confidenceClass} text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                                <strong style="font-size: 14px;">${index + 1}</strong>
+                                            </div>
+                                            <div class="flex-grow-1" style="min-width: 0;">
+                                                <strong class="d-block text-truncate" style="font-size: 13px;">${student.nama || student.name}</strong>
+                                                <small class="text-muted" style="font-size: 11px;">NIM: ${student.student_id}</small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-1 d-flex flex-wrap gap-1">
+                                            <span class="badge bg-${confidenceClass}" style="font-size: 10px;">
+                                                <i class="fas fa-chart-line me-1"></i>Conf: ${confidencePercent}%
+                                            </span>
+                                            ${student.lighting_score ? `<span class="badge bg-secondary" style="font-size: 10px;" title="Lighting Score"><i class="fas fa-lightbulb me-1"></i>${Math.round(student.lighting_score)}</span>` : ''}
+                                            ${student.face_size ? `<span class="badge bg-info text-dark" style="font-size: 10px;" title="Face Size Ratio (Jarak)"><i class="fas fa-expand-arrows-alt me-1"></i>${(student.face_size * 100).toFixed(1)}%</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    facesHTML += `
+                        </div>
+                        <small class="text-muted d-block mt-2 text-center">
+                            <i class="fas fa-clock me-1"></i>${result.timestamp || new Date().toLocaleTimeString('id-ID')}
+                        </small>
+                    `;
+                    
+                    contentDiv.innerHTML = facesHTML;
+                    
+                } else {
+                    // SINGLE FACE - Original layout
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                                    <i class="fas fa-user" style="font-size: 20px;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong class="d-block">${result.student.nama || result.student.name}</strong>
+                                    <small>NIM: ${result.student.nim || result.student.student_id}</small><br>
+                                    <small>Waktu: ${result.timestamp || new Date().toLocaleTimeString('id-ID')}</small>
+                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                        ${result.confidence ? `<span class="badge bg-success">Conf: ${(result.confidence * 100).toFixed(1)}%</span>` : ''}
+                                        ${result.lighting_score ? `<span class="badge bg-secondary" title="Lighting Score"><i class="fas fa-lightbulb me-1"></i>${Math.round(result.lighting_score)}</span>` : ''}
+                                        ${result.face_size ? `<span class="badge bg-info text-dark" title="Face Size Ratio (Jarak)"><i class="fas fa-expand-arrows-alt me-1"></i>${(result.face_size * 100).toFixed(1)}%</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning mb-0">
+                        <strong><i class="fas fa-exclamation-triangle me-1"></i> ${result.message}</strong>
+                    </div>
+                `;
+            }
+            
+            resultDiv.style.display = 'block';
+        }
+        
+        function updateStatusCard(type, message) {
+            const card = document.getElementById('statusCard');
+            card.className = `status-card status-${type}`;
+            
+            card.innerHTML = `
+                <h2 class="mb-3">${message}</h2>
+                <p class="mb-0 opacity-75">
+                    ${type === 'success' ? 'Presensi berhasil dicatat secara otomatis!' : 
+                      type === 'error' ? 'Sistem akan terus mencoba mengenali wajah Anda.' : 
+                      'Posisikan wajah dengan baik di depan kamera.'}
+                </p>
+            `;
+            
+            // Reset after 8 seconds for real-time mode
+            setTimeout(() => {
+                card.className = 'status-card';
+                card.innerHTML = `
+                    <h2 class="mb-3">
+                        <i class="fas fa-robot me-3"></i>Presensi Real-Time dengan Face Recognition
+                    </h2>
+                    <p class="mb-0 fs-5">Sistem akan otomatis mendeteksi dan mencatat presensi wajah Anda tanpa perlu menekan tombol</p>
+                `;
+            }, 8000);
+        }
+        
+        function showAlert(type, message) {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 120px; right: 20px; z-index: 1050; max-width: 400px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        async function loadAttendanceHistory() {
+            const historyDiv = document.getElementById('attendanceHistory');
+            
+            // Show loading
+            historyDiv.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Memuat riwayat presensi...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/attendance/today');
+                const data = await response.json();
+                
+                if (data.success && data.attendance.length > 0) {
+                    let html = `
+                        <div class="table-responsive">
+                            <table class="table table-hover history-table">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th><i class="fas fa-clock me-1"></i>Waktu</th>
+                                        <th><i class="fas fa-user me-1"></i>Nama</th>
+                                        <th><i class="fas fa-id-card me-1"></i>NIM</th>
+                                        <th><i class="fas fa-cog me-1"></i>Method</th>
+                                        <th><i class="fas fa-check me-1"></i>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    data.attendance.forEach(record => {
+                        const methodBadge = record.method === 'face_recognition' ? 
+                            '<span class="badge bg-primary"><i class="fas fa-camera me-1"></i>Face Recognition</span>' :
+                            '<span class="badge bg-secondary">Manual</span>';
+                            
+                        html += `
+                            <tr>
+                                <td><strong>${record.waktu}</strong></td>
+                                <td>${record.nama}</td>
+                                <td><code>${record.nim}</code></td>
+                                <td>${methodBadge}</td>
+                                <td><span class="badge bg-success"><i class="fas fa-check me-1"></i>Hadir</span></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    historyDiv.innerHTML = html;
+                } else {
+                    historyDiv.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-times text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3 mb-0">Belum ada presensi hari ini</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+                historyDiv.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                        <p class="text-danger mt-3 mb-0">Gagal memuat riwayat presensi</p>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadAttendanceHistory()">
+                            <i class="fas fa-retry me-1"></i>Coba Lagi
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Handle page visibility for camera cleanup
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden' && stream) {
+                stopCamera();
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (processInterval) {
+                clearInterval(processInterval);
+            }
+            realTimeProcessing = false;
+        });
+    </script>
+</body>
+</html>

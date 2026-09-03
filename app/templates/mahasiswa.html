@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block title %}Data Mahasiswa - Sistem Presensi Mahasiswa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar text-white p-0">
+            <div class="p-4">
+                <h5 class="mb-4">
+                    <i class="bi bi-person-check-fill me-2"></i>
+                    Presensi System
+                </h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white-50" href="{{ url_for('main.dashboard') }}">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white active" href="{{ url_for('main.mahasiswa') }}">
+                        <i class="bi bi-people me-2"></i>Mahasiswa
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.jadwal') }}">
+                        <i class="bi bi-calendar-event me-2"></i>Jadwal
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.presensi') }}">
+                        <i class="bi bi-clipboard-check me-2"></i>Presensi
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.rekapitulasi_presensi') }}">
+                        <i class="bi bi-bar-chart-line me-2"></i>Rekapitulasi
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.laporan_presensi') }}">
+                        <i class="bi bi-file-text me-2"></i>Laporan
+                    </a>
+                </nav>
+            </div>
+            <div class="mt-auto p-4">
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-2"></i>
+                        {{ session.username or 'Admin' }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Data Mahasiswa</h1>
+                <a href="{{ url_for('main.tambah_mahasiswa') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-2"></i>Tambah Mahasiswa
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Search and Filter Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-search me-2"></i>
+                        Pencarian & Filter
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="searchGeneral" class="form-label">Pencarian Umum</label>
+                            <input type="text" class="form-control" id="searchGeneral" 
+                                   placeholder="Cari berdasarkan NIM atau Nama...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filterAngkatan" class="form-label">Angkatan</label>
+                            <select class="form-select" id="filterAngkatan">
+                                <option value="">Semua Angkatan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterProdi" class="form-label">Program Studi</label>
+                            <select class="form-select" id="filterProdi">
+                                <option value="">Semua Program Studi</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filterSemester" class="form-label">Semester</label>
+                            <select class="form-select" id="filterSemester">
+                                <option value="">Semua Semester</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary w-100" id="clearFilter">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-4">
+                            <label for="filterJurusan" class="form-label">Jurusan</label>
+                            <select class="form-select" id="filterJurusan">
+                                <option value="">Semua Jurusan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterKelas" class="form-label">Kelas</label>
+                            <select class="form-select" id="filterKelas">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Info Pencarian</label>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-info me-2" id="totalStudents">0 Mahasiswa</span>
+                                <span class="badge bg-success" id="filteredStudents">0 Ditampilkan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if not error %}
+            <!-- Students Table -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Daftar Mahasiswa
+                    </h5>
+                    <span class="badge bg-primary">{{ students|length }} Mahasiswa</span>
+                </div>
+                <div class="card-body">
+                    {% if students %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>NIM</th>
+                                        <th>Nama</th>
+                                        <th>Email</th>
+                                        <th>Telepon</th>
+                                        <th>Angkatan</th>
+                                        <th>Program Studi</th>
+                                        <th>Semester</th>
+                                        <th>Jurusan</th>
+                                        <th>Kelas</th>
+                                        <th>Terdaftar</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTableBody">
+                                    {% for student in students %}
+                                    <tr class="student-row" 
+                                        data-nim="{{ student.student_id }}"
+                                        data-nama="{{ student.name }}"
+                                        data-angkatan="{{ student.class_year }}"
+                                        data-prodi="{{ student.program_study_name or '' }}"
+                                        data-semester="{{ student.semester }}"
+                                        data-jurusan="{{ student.department or '' }}"
+                                        data-kelas="{{ student.class_name or '' }}">
+                                        <td><strong>{{ student.student_id }}</strong></td>
+                                        <td>{{ student.name }}</td>
+                                        <td>
+                                            {% if student.email %}
+                                                <a href="mailto:{{ student.email }}" class="text-decoration-none">
+                                                    {{ student.email }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if student.phone %}
+                                                {{ student.phone }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><span class="badge bg-info">{{ student.class_year }}</span></td>
+                                        <td>
+                                            {% if student.program_study_name %}
+                                                {{ student.program_study_name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><span class="badge bg-warning">Semester {{ student.semester }}</span></td>
+                                        <td>
+                                            {% if student.department %}
+                                                <small class="text-primary">{{ student.department }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if student.class_name %}
+                                                <span class="badge bg-secondary">{{ student.class_name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ student.created_at.strftime('%d/%m/%Y') if student.created_at else '-' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="confirmDelete({{ student.id }}, '{{ student.name }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-people" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Belum ada data mahasiswa</h4>
+                            <p>Klik tombol "Tambah Mahasiswa" untuk menambah data baru</p>
+                            <a href="{{ url_for('main.tambah_mahasiswa') }}" class="btn btn-primary">
+                                <i class="bi bi-person-plus me-2"></i>Tambah Mahasiswa
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Error State -->
+            <div class="text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">Tidak dapat terhubung ke database</h3>
+                <p class="text-muted">Pastikan database MySQL sudah berjalan dan konfigurasi benar.</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Anda yakin ingin menghapus mahasiswa <strong id="studentName"></strong>?</p>
+                <p class="text-danger"><small>Data yang dihapus tidak dapat dikembalikan.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <a href="#" id="deleteLink" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Hapus
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Data untuk filter options
+let studentsData = [];
+
+// Initialize data dan setup filter options
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFiltersAndSearch();
+    updateStudentCounts();
+});
+
+function initializeFiltersAndSearch() {
+    // Collect all student data
+    const rows = document.querySelectorAll('.student-row');
+    studentsData = Array.from(rows).map(row => ({
+        element: row,
+        nim: row.dataset.nim,
+        nama: row.dataset.nama.toLowerCase(),
+        angkatan: row.dataset.angkatan,
+        prodi: row.dataset.prodi,
+        semester: row.dataset.semester,
+        jurusan: row.dataset.jurusan,
+        kelas: row.dataset.kelas
+    }));
+
+    // Populate filter options
+    populateFilterOptions();
+    
+    // Setup event listeners
+    setupEventListeners();
+}
+
+function populateFilterOptions() {
+    // Get unique values for each filter
+    const angkatanSet = new Set();
+    const prodiSet = new Set();
+    const semesterSet = new Set();
+    const jurusanSet = new Set();
+    const kelasSet = new Set();
+    
+    studentsData.forEach(student => {
+        if (student.angkatan) angkatanSet.add(student.angkatan);
+        if (student.prodi) prodiSet.add(student.prodi);
+        if (student.semester) semesterSet.add(student.semester);
+        if (student.jurusan) jurusanSet.add(student.jurusan);
+        if (student.kelas) kelasSet.add(student.kelas);
+    });
+    
+    // Populate dropdowns
+    populateSelect('filterAngkatan', Array.from(angkatanSet).sort());
+    populateSelect('filterProdi', Array.from(prodiSet).sort());
+    populateSelect('filterSemester', Array.from(semesterSet).sort((a, b) => parseInt(a) - parseInt(b)));
+    populateSelect('filterJurusan', Array.from(jurusanSet).sort());
+    populateSelect('filterKelas', Array.from(kelasSet).sort());
+}
+
+function populateSelect(selectId, options) {
+    const select = document.getElementById(selectId);
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option;
+        optionElement.textContent = option;
+        select.appendChild(optionElement);
+    });
+}
+
+function setupEventListeners() {
+    // Search input
+    document.getElementById('searchGeneral').addEventListener('input', filterStudents);
+    
+    // Filter dropdowns
+    document.getElementById('filterAngkatan').addEventListener('change', filterStudents);
+    document.getElementById('filterProdi').addEventListener('change', filterStudents);
+    document.getElementById('filterSemester').addEventListener('change', filterStudents);
+    document.getElementById('filterJurusan').addEventListener('change', filterStudents);
+    document.getElementById('filterKelas').addEventListener('change', filterStudents);
+    
+    // Clear button
+    document.getElementById('clearFilter').addEventListener('click', clearAllFilters);
+}
+
+function filterStudents() {
+    const searchTerm = document.getElementById('searchGeneral').value.toLowerCase();
+    const filterAngkatan = document.getElementById('filterAngkatan').value;
+    const filterProdi = document.getElementById('filterProdi').value;
+    const filterSemester = document.getElementById('filterSemester').value;
+    const filterJurusan = document.getElementById('filterJurusan').value;
+    const filterKelas = document.getElementById('filterKelas').value;
+    
+    let visibleCount = 0;
+    
+    studentsData.forEach(student => {
+        let isVisible = true;
+        
+        // General search (NIM or Name)
+        if (searchTerm && !student.nim.toLowerCase().includes(searchTerm) && !student.nama.includes(searchTerm)) {
+            isVisible = false;
+        }
+        
+        // Filter by angkatan
+        if (filterAngkatan && student.angkatan !== filterAngkatan) {
+            isVisible = false;
+        }
+        
+        // Filter by program studi
+        if (filterProdi && student.prodi !== filterProdi) {
+            isVisible = false;
+        }
+        
+        // Filter by semester
+        if (filterSemester && student.semester !== filterSemester) {
+            isVisible = false;
+        }
+        
+        // Filter by jurusan
+        if (filterJurusan && student.jurusan !== filterJurusan) {
+            isVisible = false;
+        }
+        
+        // Filter by kelas
+        if (filterKelas && student.kelas !== filterKelas) {
+            isVisible = false;
+        }
+        
+        // Show/hide row
+        student.element.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+    });
+    
+    // Update counts
+    document.getElementById('filteredStudents').textContent = `${visibleCount} Ditampilkan`;
+    
+    // Show message if no results
+    showNoResultsMessage(visibleCount === 0);
+}
+
+function clearAllFilters() {
+    document.getElementById('searchGeneral').value = '';
+    document.getElementById('filterAngkatan').value = '';
+    document.getElementById('filterProdi').value = '';
+    document.getElementById('filterSemester').value = '';
+    document.getElementById('filterJurusan').value = '';
+    document.getElementById('filterKelas').value = '';
+    
+    // Show all rows
+    studentsData.forEach(student => {
+        student.element.style.display = '';
+    });
+    
+    updateStudentCounts();
+    showNoResultsMessage(false);
+}
+
+function updateStudentCounts() {
+    const totalCount = studentsData.length;
+    document.getElementById('totalStudents').textContent = `${totalCount} Mahasiswa`;
+    document.getElementById('filteredStudents').textContent = `${totalCount} Ditampilkan`;
+}
+
+function showNoResultsMessage(show) {
+    let noResultsRow = document.getElementById('noResultsRow');
+    
+    if (show && !noResultsRow) {
+        // Create no results message row
+        const tbody = document.getElementById('studentsTableBody');
+        noResultsRow = document.createElement('tr');
+        noResultsRow.id = 'noResultsRow';
+        noResultsRow.innerHTML = `
+            <td colspan="11" class="text-center text-muted py-4">
+                <i class="bi bi-search" style="font-size: 2rem;"></i>
+                <h5 class="mt-2">Tidak ada hasil yang ditemukan</h5>
+                <p>Coba ubah kriteria pencarian atau filter Anda</p>
+            </td>
+        `;
+        tbody.appendChild(noResultsRow);
+    } else if (!show && noResultsRow) {
+        noResultsRow.remove();
+    }
+}
+
+function confirmDelete(studentId, studentName) {
+    document.getElementById('studentName').textContent = studentName;
+    document.getElementById('deleteLink').href = `/mahasiswa/hapus/${studentId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

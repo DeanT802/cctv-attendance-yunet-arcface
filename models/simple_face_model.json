@@ -1,0 +1,27 @@
+{
+  "known_students": {
+    "2023001": {
+      "name": "Andi Pratama",
+      "student_id": "2023001",
+      "image_count": 5
+    },
+    "2024002": {
+      "name": "Linda Sari",
+      "student_id": "2024002",
+      "image_count": 5
+    },
+    "24022074": {
+      "name": "Muhammad Aslam",
+      "student_id": "24022074",
+      "image_count": 5
+    },
+    "24022888": {
+      "name": "Wahyu Saputra aja",
+      "student_id": "24022888",
+      "image_count": 5
+    }
+  },
+  "is_trained": true,
+  "confidence_threshold": 0.7,
+  "version": "simple_demo_v1"
+}

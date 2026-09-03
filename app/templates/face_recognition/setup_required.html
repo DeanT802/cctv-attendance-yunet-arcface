@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition Setup{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        {% include 'sidebar.html' %}
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-camera me-2"></i>Face Recognition System
+                </h2>
+            </div>
+
+            <!-- Setup Required Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Setup Dependencies Required
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>Sistem Face Recognition belum dapat digunakan</h6>
+                                    <p class="text-muted">
+                                        Untuk menggunakan fitur Face Recognition, Anda perlu menginstall beberapa dependencies Python.
+                                        Dependencies ini diperlukan untuk deteksi wajah, pengenalan wajah, dan anti-spoofing.
+                                    </p>
+                                    
+                                    <h6 class="mt-4">Required Dependencies:</h6>
+                                    <ul class="list-group mb-4">
+                                        {% for package in required_packages %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>
+                                                <i class="bi bi-box-seam me-2"></i>{{ package }}
+                                            </span>
+                                            <span class="badge bg-secondary">Not Installed</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <i class="bi bi-robot" style="font-size: 4rem; color: #ffc107;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Installation Instructions -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-terminal me-2"></i>
+                                Installation Instructions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Automatic Installation:</strong> Jalankan script otomatis yang tersedia
+                            </div>
+                            
+                            <h6>Opsi 1: Gunakan Script Otomatis</h6>
+                            <div class="bg-dark text-light p-3 rounded mb-3">
+                                <code>
+                                    # Windows PowerShell<br>
+                                    .\install_face_recognition.bat
+                                </code>
+                            </div>
+                            
+                            <h6>Opsi 2: Manual Installation</h6>
+                            <div class="bg-dark text-light p-3 rounded mb-3">
+                                <code>
+                                    pip install dlib<br>
+                                    pip install opencv-python<br>
+                                    pip install tensorflow<br>
+                                    pip install mediapipe<br>
+                                    pip install albumentations
+                                </code>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> Instalasi dlib mungkin memerlukan Visual Studio Build Tools atau CMake.
+                                Proses instalasi dapat memakan waktu beberapa menit.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Features -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-check me-2"></i>
+                                Fitur yang Tersedia Setelah Setup
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Registrasi wajah mahasiswa
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Presensi otomatis dengan AI
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Anti-spoofing detection
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Real-time face recognition
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Statistik dan laporan
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle text-success me-2"></i>
+                                            Data augmentation untuk akurasi
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+                <div class="col-12 text-center">
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary me-3">
+                        <i class="bi bi-arrow-left me-2"></i>Kembali ke Dashboard
+                    </a>
+                    <button class="btn btn-warning" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Check Dependencies Again
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto refresh every 30 seconds to check if dependencies are installed
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

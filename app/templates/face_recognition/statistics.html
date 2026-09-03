@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition Statistics{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        {% include 'sidebar.html' %}
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="bi bi-bar-chart-line text-primary"></i>
+                        Face Recognition Statistics
+                    </h1>
+                    <p class="text-muted">Comprehensive analytics for AI-powered attendance system</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('face_recognition.face_recognition_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Overall Statistics -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Total Students
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        {{ overall_stats.total_students or 0 }}
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-people fa-2x text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Registered Faces
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        {{ overall_stats.registered_faces or 0 }}
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-person-check fa-2x text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Registration Rate
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        {{ overall_stats.registration_percentage or 0 }}%
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-percent fa-2x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Pending Registration
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        {{ overall_stats.pending_registration or 0 }}
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-clock fa-2x text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Attendance Methods Distribution -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="bi bi-pie-chart"></i> Attendance Methods Distribution
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="attendanceMethodsChart"></canvas>
+                            <div class="mt-3">
+                                {% for method in attendance_methods %}
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small">{{ method.attendance_method|title }}</span>
+                                    <span class="small font-weight-bold">{{ method.percentage }}%</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confidence Score Distribution -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="bi bi-speedometer2"></i> Face Recognition Confidence Distribution
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="confidenceChart"></canvas>
+                            <div class="mt-3">
+                                {% for conf in confidence_stats %}
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small">{{ conf.confidence_range }}</span>
+                                    <span class="small font-weight-bold">{{ conf.count }} records</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Face Recognition Trends -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="bi bi-graph-up"></i> Monthly Face Recognition Attendance Trends
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyTrendsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Statistics Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="bi bi-table"></i> Detailed Statistics Summary
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-info">Registration Progress</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td>Total Students:</td>
+                                                <td class="font-weight-bold">{{ overall_stats.total_students or 0 }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Faces Registered:</td>
+                                                <td class="font-weight-bold text-success">{{ overall_stats.registered_faces or 0 }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Pending Registration:</td>
+                                                <td class="font-weight-bold text-warning">{{ overall_stats.pending_registration or 0 }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Completion Rate:</td>
+                                                <td class="font-weight-bold">{{ overall_stats.registration_percentage or 0 }}%</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-info">System Performance</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            {% for method in attendance_methods %}
+                                            <tr>
+                                                <td>{{ method.attendance_method|title }} Method:</td>
+                                                <td class="font-weight-bold">{{ method.count }} records ({{ method.percentage }}%)</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Attendance Methods Pie Chart
+    const attendanceCtx = document.getElementById('attendanceMethodsChart').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for method in attendance_methods %}'{{ method.attendance_method|title }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for method in attendance_methods %}{{ method.percentage }}{% if not loop.last %},{% endif %}{% endfor %}],
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Confidence Distribution Chart
+    const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+    new Chart(confidenceCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for conf in confidence_stats %}'{{ conf.confidence_range }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Recognition Count',
+                data: [{% for conf in confidence_stats %}{{ conf.count }}{% if not loop.last %},{% endif %}{% endfor %}],
+                backgroundColor: ['#e74a3b', '#f6c23e', '#36b9cc', '#1cc88a'],
+                borderColor: ['#c0392b', '#f39c12', '#2c3e50', '#27ae60'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Monthly Trends Chart
+    const monthlyCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for month in monthly_stats %}'{{ month.month }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Face Recognition Attendance',
+                data: [{% for month in monthly_stats %}{{ month.face_attendance_count }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

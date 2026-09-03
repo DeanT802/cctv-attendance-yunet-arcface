@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah Jadwal - Sistem Presensi Mahasiswa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar text-white p-0">
+            <div class="p-4">
+                <h5 class="mb-4">
+                    <i class="bi bi-person-check-fill me-2"></i>
+                    Presensi System
+                </h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white-50" href="{{ url_for('main.dashboard') }}">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.mahasiswa') }}">
+                        <i class="bi bi-people me-2"></i>Mahasiswa
+                    </a>
+                    <a class="nav-link text-white active" href="{{ url_for('main.jadwal') }}">
+                        <i class="bi bi-calendar-event me-2"></i>Jadwal
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.presensi') }}">
+                        <i class="bi bi-clipboard-check me-2"></i>Presensi
+                    </a>
+                </nav>
+            </div>
+            <div class="mt-auto p-4">
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-2"></i>
+                        {{ session.username or 'Admin' }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Tambah Jadwal Kuliah</h1>
+                <a href="{{ url_for('main.jadwal') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Kembali
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-plus me-2"></i>
+                                Form Jadwal Kuliah
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="course_id" class="form-label">Mata Kuliah <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="course_id" name="course_id" required>
+                                            <option value="">Pilih Mata Kuliah</option>
+                                            {% for course in courses %}
+                                                <option value="{{ course.id }}" data-credits="{{ course.credits }}">{{ course.course_code }} - {{ course.name }} ({{ course.credits }} SKS)</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-3 mb-3">
+                                        <label for="sks" class="form-label">SKS</label>
+                                        <input type="number" class="form-control" id="sks" name="sks" readonly 
+                                               placeholder="Auto" style="background-color: #f8f9fa;">
+                                        <div class="form-text">Otomatis terisi dari mata kuliah</div>
+                                    </div>
+                                    
+                                    <div class="col-md-3 mb-3">
+                                        <label for="teacher_id" class="form-label">Dosen Pengampu <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="teacher_id" name="teacher_id" required>
+                                            <option value="">Pilih Dosen</option>
+                                            {% for teacher in teachers %}
+                                                <option value="{{ teacher.id }}">{{ teacher.teacher_id }} - {{ teacher.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="class_name" class="form-label">Kelas <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="class_name" name="class_name" list="class_suggestions" required>
+                                        <datalist id="class_suggestions">
+                                            {% for class_name in available_classes %}
+                                                <option value="{{ class_name }}">{{ class_name }}</option>
+                                            {% endfor %}
+                                        </datalist>
+                                        <div class="form-text">Format: [Nomor][Prodi][Semester] (1TI2, 1SI1, 2TK3)</div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3">
+                                        <label for="day" class="form-label">Hari <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="day" name="day" required>
+                                            <option value="">Pilih Hari</option>
+                                            <option value="Senin">Senin</option>
+                                            <option value="Selasa">Selasa</option>
+                                            <option value="Rabu">Rabu</option>
+                                            <option value="Kamis">Kamis</option>
+                                            <option value="Jumat">Jumat</option>
+                                            <option value="Sabtu">Sabtu</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3">
+                                        <label for="room" class="form-label">Ruang</label>
+                                        <input type="text" class="form-control" id="room" name="room" 
+                                               placeholder="Contoh: Lab 1, Ruang 301">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="time_start" class="form-label">Waktu Mulai <span class="text-danger">*</span></label>
+                                        <input type="time" class="form-control" id="time_start" name="time_start" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="time_end" class="form-label">Waktu Selesai <span class="text-danger">*</span></label>
+                                        <input type="time" class="form-control" id="time_end" name="time_end" required>
+                                    </div>
+                                </div>
+                                
+                                <!-- Multiple Check-in Settings -->
+                                <div class="card mb-3 border-info">
+                                    <div class="card-header bg-info bg-opacity-10">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-arrow-repeat me-2"></i>
+                                            Pengaturan Absensi Berulang (Multiple Check-in)
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="checkpoint_enabled" name="checkpoint_enabled" value="1">
+                                            <label class="form-check-label" for="checkpoint_enabled">
+                                                <strong>Aktifkan Absensi Berulang</strong>
+                                                <div class="form-text">Mahasiswa harus hadir di beberapa waktu checkpoint selama kuliah untuk mencegah mahasiswa yang hadir di awal lalu kabur</div>
+                                            </label>
+                                        </div>
+                                        
+                                        <div id="checkpoint_settings" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="checkpoint_interval" class="form-label">Interval Checkpoint <span class="text-danger">*</span></label>
+                                                    <select class="form-select" id="checkpoint_interval" name="checkpoint_interval">
+                                                        <option value="30">Setiap 30 menit</option>
+                                                        <option value="45">Setiap 45 menit</option>
+                                                        <option value="60">Setiap 60 menit (1 jam)</option>
+                                                        <option value="20">Setiap 20 menit (singkat)</option>
+                                                        <option value="90">Setiap 90 menit (1.5 jam)</option>
+                                                    </select>
+                                                    <div class="form-text">Berapa menit sekali mahasiswa harus scan wajah</div>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="total_checkpoints" class="form-label">Jumlah Checkpoint <span class="text-danger">*</span></label>
+                                                    <select class="form-select" id="total_checkpoints" name="total_checkpoints">
+                                                        <option value="2">2 kali check-in</option>
+                                                        <option value="3">3 kali check-in</option>
+                                                        <option value="4" selected>4 kali check-in</option>
+                                                        <option value="5">5 kali check-in</option>
+                                                    </select>
+                                                    <div class="form-text">Total berapa kali mahasiswa harus hadir</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Preview Checkpoint Schedule -->
+                                            <div class="alert alert-info mb-0" id="checkpoint_preview">
+                                                <strong><i class="bi bi-info-circle me-2"></i>Preview Jadwal Checkpoint:</strong>
+                                                <div id="checkpoint_schedule" class="mt-2">
+                                                    <p class="mb-0"><em>Isi waktu mulai dan selesai untuk melihat preview checkpoint</em></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="semester" class="form-label">Semester <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="semester" name="semester" required>
+                                            <option value="">Pilih Semester</option>
+                                            <option value="1">Semester 1</option>
+                                            <option value="2">Semester 2</option>
+                                            <option value="3">Semester 3</option>
+                                            <option value="4">Semester 4</option>
+                                            <option value="5">Semester 5</option>
+                                            <option value="6">Semester 6</option>
+                                            <option value="7">Semester 7</option>
+                                            <option value="8">Semester 8</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="academic_year" class="form-label">Tahun Akademik <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="academic_year" name="academic_year" required>
+                                            <option value="">Pilih Tahun Akademik</option>
+                                            <option value="2024/2025">2024/2025</option>
+                                            <option value="2023/2024">2023/2024</option>
+                                            <option value="2022/2023">2022/2023</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('main.jadwal') }}" class="btn btn-secondary me-md-2">
+                                        <i class="bi bi-x-circle me-2"></i>Batal
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle me-2"></i>Simpan Jadwal
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Help Card -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Panduan Pengisian
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Mata Kuliah:</strong> Pilih dari daftar mata kuliah yang tersedia</li>
+                                <li><strong>Dosen:</strong> Pilih dosen pengampu mata kuliah</li>
+                                <li><strong>Kelas:</strong> Format Nomor-Prodi-Semester (contoh: 1TI2, 1SI3, 2IF1)</li>
+                                <li><strong>Hari:</strong> Hari pelaksanaan kuliah</li>
+                                <li><strong>Waktu:</strong> Jam mulai dan selesai kuliah</li>
+                                <li><strong>Ruang:</strong> Lokasi pelaksanaan kuliah (opsional)</li>
+                                <li><strong>Semester:</strong> Semester mata kuliah sesuai kurikulum</li>
+                                <li><strong>Tahun Akademik:</strong> Periode akademik</li>
+                                <li class="mt-2"><strong>Absensi Berulang (Multiple Check-in):</strong>
+                                    <ul class="mt-1">
+                                        <li><strong>Aktifkan:</strong> Jika dicentang, mahasiswa harus scan wajah beberapa kali selama kuliah</li>
+                                        <li><strong>Interval:</strong> Jarak waktu antar checkpoint (30/45/60 menit)</li>
+                                        <li><strong>Jumlah Checkpoint:</strong> Berapa kali mahasiswa harus scan wajah (2-5x)</li>
+                                        <li><strong>Contoh:</strong> Kuliah 2 jam, interval 30 menit = 4x checkpoint (jam 08:00, 08:30, 09:00, 09:30)</li>
+                                        <li><strong>Manfaat:</strong> Mencegah mahasiswa yang hadir di awal lalu kabur</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const courseId = document.getElementById('course_id').value;
+    const teacherId = document.getElementById('teacher_id').value;
+    const className = document.getElementById('class_name').value;
+    const day = document.getElementById('day').value;
+    const timeStart = document.getElementById('time_start').value;
+    const timeEnd = document.getElementById('time_end').value;
+    const semester = document.getElementById('semester').value;
+    const academicYear = document.getElementById('academic_year').value;
+    
+    if (!courseId || !teacherId || !className || !day || !timeStart || !timeEnd || !semester || !academicYear) {
+        e.preventDefault();
+        alert('Mohon isi semua field yang wajib diisi (*)');
+        return;
+    }
+    
+    // Validate time
+    if (timeStart >= timeEnd) {
+        e.preventDefault();
+        alert('Waktu mulai harus lebih awal dari waktu selesai');
+        return;
+    }
+    
+    // Validate class name format (new format: number + program abbreviation + semester)
+    const classNamePattern = /^\d+[A-Z]{2}\d+$/;
+    if (!classNamePattern.test(className)) {
+        e.preventDefault();
+        alert('Format kelas tidak valid. Gunakan format seperti: 1TI2, 1SI3, 2IF1');
+        return;
+    }
+});
+
+// Auto-populate semester and SKS based on course selection
+document.getElementById('course_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const sksField = document.getElementById('sks');
+    
+    if (selectedOption.value) {
+        // Get SKS from data attribute
+        const credits = selectedOption.getAttribute('data-credits');
+        sksField.value = credits || '';
+        
+        // Extract semester info from course if available
+        // You can extend this logic based on your course naming convention
+        const courseText = selectedOption.text;
+        // You can add logic here to auto-select semester based on course
+    } else {
+        sksField.value = '';
+    }
+});
+
+// ========== CHECKPOINT SETTINGS ==========
+
+// Toggle checkpoint settings visibility
+document.getElementById('checkpoint_enabled').addEventListener('change', function() {
+    const settingsDiv = document.getElementById('checkpoint_settings');
+    if (this.checked) {
+        settingsDiv.style.display = 'block';
+        updateCheckpointPreview();
+    } else {
+        settingsDiv.style.display = 'none';
+    }
+});
+
+// Update preview when settings change
+document.getElementById('checkpoint_interval').addEventListener('change', updateCheckpointPreview);
+document.getElementById('total_checkpoints').addEventListener('change', updateCheckpointPreview);
+document.getElementById('time_start').addEventListener('change', updateCheckpointPreview);
+document.getElementById('time_end').addEventListener('change', updateCheckpointPreview);
+
+function updateCheckpointPreview() {
+    const enabled = document.getElementById('checkpoint_enabled').checked;
+    if (!enabled) return;
+    
+    const timeStart = document.getElementById('time_start').value;
+    const timeEnd = document.getElementById('time_end').value;
+    const interval = parseInt(document.getElementById('checkpoint_interval').value);
+    const totalCheckpoints = parseInt(document.getElementById('total_checkpoints').value);
+    
+    const scheduleDiv = document.getElementById('checkpoint_schedule');
+    
+    if (!timeStart || !timeEnd) {
+        scheduleDiv.innerHTML = '<p class="mb-0"><em>Isi waktu mulai dan selesai untuk melihat preview checkpoint</em></p>';
+        return;
+    }
+    
+    // Parse time
+    const [startHour, startMin] = timeStart.split(':').map(Number);
+    const [endHour, endMin] = timeEnd.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    const totalDuration = endMinutes - startMinutes;
+    
+    if (totalDuration <= 0) {
+        scheduleDiv.innerHTML = '<p class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Waktu selesai harus lebih besar dari waktu mulai!</p>';
+        return;
+    }
+    
+    // Calculate checkpoints
+    let html = '<div class="row g-2">';
+    
+    for (let i = 0; i < totalCheckpoints; i++) {
+        const checkpointMinutes = startMinutes + (i * interval);
+        const checkpointHour = Math.floor(checkpointMinutes / 60);
+        const checkpointMin = checkpointMinutes % 60;
+        const checkpointTime = `${String(checkpointHour).padStart(2, '0')}:${String(checkpointMin).padStart(2, '0')}`;
+        
+        // Check if checkpoint is within class time
+        const isValid = checkpointMinutes <= endMinutes;
+        const badgeClass = isValid ? 'bg-success' : 'bg-danger';
+        const icon = isValid ? 'check-circle-fill' : 'x-circle-fill';
+        
+        html += `
+            <div class="col-md-3">
+                <div class="badge ${badgeClass} w-100 p-2">
+                    <i class="bi bi-${icon} me-1"></i>
+                    Checkpoint ${i + 1}<br>
+                    <strong>${checkpointTime}</strong>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    
+    // Add summary
+    const validCheckpoints = Math.min(totalCheckpoints, Math.floor(totalDuration / interval) + 1);
+    
+    html += '<div class="mt-3">';
+    html += `<p class="mb-1"><strong>Durasi Kuliah:</strong> ${totalDuration} menit (${(totalDuration / 60).toFixed(1)} jam)</p>`;
+    html += `<p class="mb-1"><strong>Checkpoint Valid:</strong> ${validCheckpoints} dari ${totalCheckpoints}</p>`;
+    
+    if (validCheckpoints < totalCheckpoints) {
+        html += '<p class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i><strong>Peringatan:</strong> Beberapa checkpoint melebihi waktu kuliah. Kurangi jumlah checkpoint atau perbesar interval.</p>';
+    } else {
+        html += '<p class="mb-0 text-success"><i class="bi bi-check-circle me-2"></i>Semua checkpoint dalam rentang waktu kuliah.</p>';
+    }
+    
+    html += '</div>';
+    
+    scheduleDiv.innerHTML = html;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default values
+    document.getElementById('checkpoint_interval').value = '30';
+    document.getElementById('total_checkpoints').value = '4';
+});
+</script>
+{% endblock %}

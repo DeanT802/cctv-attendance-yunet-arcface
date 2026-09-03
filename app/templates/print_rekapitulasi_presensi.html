@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cetak Rekapitulasi Presensi - {{ schedule_info.course_name if schedule_info else 'Error' }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .header h2 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .course-info {
+            margin-bottom: 20px;
+            border: 1px solid #000;
+            padding: 15px;
+        }
+        
+        .course-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .course-info td {
+            padding: 4px 8px;
+            vertical-align: top;
+        }
+        
+        .course-info .label {
+            font-weight: bold;
+            width: 150px;
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 10px;
+        }
+        
+        .attendance-table th,
+        .attendance-table td {
+            border: 1px solid #000;
+            padding: 4px 2px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .attendance-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 9px;
+        }
+        
+        .attendance-table .student-name {
+            text-align: left;
+            max-width: 150px;
+            font-size: 9px;
+        }
+        
+        .attendance-table .student-nim {
+            font-size: 9px;
+        }
+        
+        .meeting-col {
+            width: 25px;
+            font-size: 8px;
+        }
+        
+        .summary-col {
+            width: 40px;
+            font-size: 9px;
+        }
+        
+        .percentage-col {
+            width: 60px;
+            font-size: 9px;
+        }
+        
+        .status-present {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        
+        .status-absent {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+        
+        .status-empty {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .statistics {
+            margin-top: 20px;
+            border: 1px solid #000;
+            padding: 15px;
+        }
+        
+        .statistics h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        
+        .stat-item {
+            flex: 1;
+        }
+        
+        .stat-item h4 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-item p {
+            font-size: 10px;
+        }
+        
+        .legend {
+            margin-top: 15px;
+            font-size: 10px;
+            text-align: center;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #000;
+            padding-top: 15px;
+        }
+        
+        .signature {
+            text-align: center;
+            width: 200px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 60px;
+            padding-top: 5px;
+        }
+        
+        @page {
+            size: A4 landscape;
+            margin: 0.5in;
+        }
+        
+        @media print {
+            body {
+                font-size: 11px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .attendance-table {
+                font-size: 9px;
+            }
+            
+            .attendance-table th,
+            .attendance-table td {
+                padding: 2px 1px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if error %}
+            <div style="text-align: center; padding: 50px;">
+                <h2>Terjadi Kesalahan</h2>
+                <p>Tidak dapat mengambil data rekapitulasi presensi.</p>
+            </div>
+        {% elif schedule_info %}
+            <!-- Header -->
+            <div class="header">
+                <h1>Rekapitulasi Presensi Mahasiswa</h1>
+                <h2>Semester {{ schedule_info.semester }} Tahun Akademik {{ schedule_info.academic_year }}</h2>
+                <p>Dicetak pada: {{ current_date }}</p>
+            </div>
+            
+            <!-- Course Information -->
+            <div class="course-info">
+                <table>
+                    <tr>
+                        <td class="label">Mata Kuliah</td>
+                        <td>: {{ schedule_info.course_code }} - {{ schedule_info.course_name }}</td>
+                        <td class="label">SKS</td>
+                        <td>: {{ schedule_info.credits }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Dosen Pengampu</td>
+                        <td>: {{ schedule_info.teacher_name }} ({{ schedule_info.teacher_code }})</td>
+                        <td class="label">Jumlah Mahasiswa</td>
+                        <td>: {{ attendance_recap|length }} orang</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Kelas</td>
+                        <td>: {{ schedule_info.class_name }}</td>
+                        <td class="label">Hari/Waktu</td>
+                        <td>: {{ schedule_info.day }}, {{ schedule_info.time_start }} - {{ schedule_info.time_end }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            {% if attendance_recap %}
+                <!-- Attendance Table -->
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 30px;">No</th>
+                            <th rowspan="2" class="student-name">Nama Mahasiswa</th>
+                            <th rowspan="2" style="width: 80px;">NIM</th>
+                            <th colspan="16">Pertemuan Ke-</th>
+                            <th rowspan="2" class="summary-col">Hadir</th>
+                            <th rowspan="2" class="summary-col">Tidak Hadir</th>
+                            <th rowspan="2" class="percentage-col">Kehadiran (%)</th>
+                            <th rowspan="2" style="width: 80px;">Keterangan</th>
+                        </tr>
+                        <tr>
+                            {% for i in range(1, 17) %}
+                                <th class="meeting-col">{{ i }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in attendance_recap %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="student-name">{{ student.student_name }}</td>
+                            <td class="student-nim">{{ student.student_number }}</td>
+                            
+                            <!-- Meeting Attendance Columns -->
+                            {% for i in range(1, 17) %}
+                                <td class="meeting-col">
+                                    {% if student.meetings[i] %}
+                                        {% if student.meetings[i].status == 'present' %}
+                                            <span class="status-present">✓</span>
+                                        {% elif student.meetings[i].status == 'absent' %}
+                                            <span class="status-absent">✗</span>
+                                        {% else %}
+                                            <span class="status-empty">-</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="status-empty">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            
+                            <td class="summary-col"><strong>{{ student.total_present }}</strong></td>
+                            <td class="summary-col"><strong>{{ student.total_absent }}</strong></td>
+                            <td class="percentage-col">
+                                <strong>
+                                    {% if student.attendance_percentage >= 80 %}
+                                        {{ student.attendance_percentage }}%
+                                    {% elif student.attendance_percentage >= 60 %}
+                                        {{ student.attendance_percentage }}%
+                                    {% else %}
+                                        {{ student.attendance_percentage }}%
+                                    {% endif %}
+                                </strong>
+                            </td>
+                            <td>
+                                <strong>{{ student.notes }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Statistics -->
+                <div class="statistics">
+                    <h3>Ringkasan Statistik Kehadiran</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h4>{{ attendance_recap|selectattr('notes', 'equalto', 'Baik')|list|length }}</h4>
+                            <p>Mahasiswa dengan kehadiran Baik (≥80%)</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>{{ attendance_recap|selectattr('notes', 'equalto', 'Cukup')|list|length }}</h4>
+                            <p>Mahasiswa dengan kehadiran Cukup (60-79%)</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>{{ attendance_recap|selectattr('notes', 'equalto', 'Kurang')|list|length }}</h4>
+                            <p>Mahasiswa dengan kehadiran Kurang (<60%)</p>
+                        </div>
+                        <div class="stat-item">
+                            {% set avg_attendance = (attendance_recap|map(attribute='attendance_percentage')|sum / attendance_recap|length) if attendance_recap|length > 0 else 0 %}
+                            <h4>{{ "%.1f"|format(avg_attendance) }}%</h4>
+                            <p>Rata-rata Kehadiran Kelas</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Legend -->
+                <div class="legend">
+                    <strong>Keterangan:</strong>
+                    <span class="status-present">✓</span> = Hadir &nbsp;&nbsp;
+                    <span class="status-absent">✗</span> = Tidak Hadir &nbsp;&nbsp;
+                    <span class="status-empty">-</span> = Belum Ada Pertemuan
+                </div>
+                
+                <!-- Footer with Signatures -->
+                <div class="footer">
+                    <div class="signature">
+                        <p>Mengetahui,</p>
+                        <p><strong>Dosen Pengampu</strong></p>
+                        <div class="signature-line">
+                            <strong>{{ schedule_info.teacher_name }}</strong><br>
+                            NIP. {{ schedule_info.teacher_code }}
+                        </div>
+                    </div>
+                    <div class="signature">
+                        <p>{{ current_date }}</p>
+                        <p><strong>Petugas Akademik</strong></p>
+                        <div class="signature-line">
+                            <strong>(...........................)</strong><br>
+                            NIP. .............................
+                        </div>
+                    </div>
+                </div>
+                
+            {% else %}
+                <div style="text-align: center; padding: 50px;">
+                    <h3>Tidak Ada Data</h3>
+                    <p>Belum ada mahasiswa terdaftar di kelas {{ schedule_info.class_name }}.</p>
+                </div>
+            {% endif %}
+            
+        {% else %}
+            <div style="text-align: center; padding: 50px;">
+                <h2>Jadwal Tidak Ditemukan</h2>
+                <p>Jadwal yang diminta tidak dapat ditemukan.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Auto print when page loads
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</body>
+</html>

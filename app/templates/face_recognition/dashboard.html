@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        {% include 'sidebar.html' %}
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            {% block extra_css %}
+            <style>
+                .face-recognition-card {
+                    border-left: 4px solid #007bff;
+                    transition: transform 0.2s;
+                }
+                .face-recognition-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                }
+                .stat-icon {
+                    font-size: 2rem;
+                    opacity: 0.8;
+                }
+                .progress {
+                    height: 8px;
+                }
+                .badge-method {
+                    font-size: 0.75rem;
+                }
+                .camera-icon {
+                    color: #28a745;
+                }
+                .face-icon {
+                    color: #17a2b8;
+                }
+                .chart-container {
+                    position: relative;
+                    height: 300px;
+                }
+            </style>
+            {% endblock %}
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-user-check text-primary"></i>
+                Face Recognition System
+            </h1>
+            <p class="text-muted">Advanced AI-powered attendance with anti-spoofing</p>
+        </div>
+        <div>
+            <a href="{{ url_for('face_recognition.test_camera') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-video"></i> Test Camera
+            </a>
+            <a href="{{ url_for('face_recognition.register_student_form') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Register Face
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Total Students -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2 face-recognition-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Students
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_students or 0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users stat-icon text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registered Faces -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2 face-recognition-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Registered Faces
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.registered_faces or 0 }}
+                            </div>
+                            <div class="mt-2">
+                                {% set total = stats.total_students or 1 %}
+                                {% set registered = stats.registered_faces or 0 %}
+                                {% set percentage = (registered / total * 100) | round(1) %}
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ percentage }}%" aria-valuenow="{{ percentage }}" 
+                                         aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small class="text-muted">{{ percentage }}% completion</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check stat-icon text-success face-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Registration -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2 face-recognition-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending Registration
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.pending_registration or 0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-clock stat-icon text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Face Attendance Today -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2 face-recognition-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Face Attendance Today
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ recent_attendance | length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-camera stat-icon text-info camera-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('face_recognition.face_attendance_form') }}" 
+                               class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-camera"></i><br>
+                                <span class="small">Start Face Attendance</span>
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('face_recognition.register_student_form') }}" 
+                               class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-user-plus"></i><br>
+                                <span class="small">Register New Face</span>
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('face_recognition.face_recognition_statistics') }}" 
+                               class="btn btn-info btn-lg w-100">
+                                <i class="fas fa-chart-bar"></i><br>
+                                <span class="small">View Statistics</span>
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{{ url_for('face_recognition.test_camera') }}" 
+                               class="btn btn-warning btn-lg w-100">
+                                <i class="fas fa-video"></i><br>
+                                <span class="small">Test Camera</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Courses -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-book"></i> Available Courses for Face Attendance
+                    </h6>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if courses %}
+                        {% for course in courses %}
+                        <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ course.course_name }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-chalkboard-teacher"></i> {{ course.teacher_name }} |
+                                    <i class="fas fa-users"></i> {{ course.class_name }}
+                                </small>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('face_recognition.face_attendance_form') }}?course_id={{ course.id }}" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-camera"></i> Start
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted">
+                            <i class="fas fa-book-open fa-2x mb-3"></i>
+                            <p>No courses available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Face Recognition Attendance -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history"></i> Recent Face Recognition Attendance
+                    </h6>
+                    <a href="{{ url_for('face_recognition.face_recognition_statistics') }}" 
+                       class="btn btn-sm btn-primary">
+                        <i class="fas fa-chart-line"></i> View All Statistics
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Course</th>
+                                        <th>Meeting</th>
+                                        <th>Time</th>
+                                        <th>Confidence</th>
+                                        <th>Method</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attendance in recent_attendance %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm me-2">
+                                                    <div class="avatar-title bg-primary rounded-circle">
+                                                        {{ attendance.name[0].upper() }}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0">{{ attendance.name }}</h6>
+                                                    <small class="text-muted">{{ attendance.student_id }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ attendance.course_name }}</td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                Meeting {{ attendance.meeting_number }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small>{{ attendance.attendance_time.strftime('%d/%m/%Y %H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            {% if attendance.confidence_score %}
+                                                {% set confidence = (attendance.confidence_score * 100) | round(1) %}
+                                                {% if confidence >= 90 %}
+                                                    <span class="badge bg-success">{{ confidence }}%</span>
+                                                {% elif confidence >= 70 %}
+                                                    <span class="badge bg-warning">{{ confidence }}%</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">{{ confidence }}%</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary badge-method">
+                                                <i class="fas fa-user-check"></i> Face Recognition
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-camera fa-3x mb-3"></i>
+                            <h5>No Face Recognition Attendance Yet</h5>
+                            <p>Start using face recognition to mark attendance and see the results here.</p>
+                            <a href="{{ url_for('face_recognition.face_attendance_form') }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-camera"></i> Start Face Attendance
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize any additional JavaScript for face recognition dashboard
+    
+    // Auto-refresh recent attendance every 30 seconds
+    setInterval(function() {
+        // You can implement auto-refresh here if needed
+    }, 30000);
+    
+    // Add hover effects for cards
+    $('.face-recognition-card').hover(
+        function() {
+            $(this).addClass('shadow-lg');
+        },
+        function() {
+            $(this).removeClass('shadow-lg');
+        }
+    );
+});
+</script>
+{% endblock %}

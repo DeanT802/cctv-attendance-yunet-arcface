@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}Register Student Face{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #007bff;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
+    }
+    .upload-area:hover {
+        border-color: #0056b3;
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+    .upload-area.dragover {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f0fff4 0%, #c8e6c9 100%);
+    }
+    .preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    .preview-item {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .preview-item .remove-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(220, 53, 69, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .face-guidelines {
+        background: #f8f9fa;
+        border-left: 4px solid #17a2b8;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .student-select {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .progress-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #007bff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 15px;
+    }
+    .step-number.completed {
+        background: #28a745;
+    }
+    .camera-preview {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-user-plus text-primary"></i>
+                Register Student Face
+            </h1>
+            <p class="text-muted">Register face biometric data for AI-powered attendance</p>
+        </div>
+        <div>
+            <a href="{{ url_for('face_recognition.face_recognition_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Registration Form -->
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-camera"></i> Face Registration Process
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Progress Steps -->
+                    <div class="progress-step">
+                        <div class="step-number" id="step1">1</div>
+                        <div>
+                            <h6 class="mb-0">Select Student</h6>
+                            <small class="text-muted">Choose student for face registration</small>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-step">
+                        <div class="step-number" id="step2">2</div>
+                        <div>
+                            <h6 class="mb-0">Upload Face Images</h6>
+                            <small class="text-muted">Provide at least 3 clear face photos</small>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-step">
+                        <div class="step-number" id="step3">3</div>
+                        <div>
+                            <h6 class="mb-0">Process & Register</h6>
+                            <small class="text-muted">AI will process and register the face data</small>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <form id="faceRegistrationForm" action="{{ url_for('face_recognition.register_student') }}" method="POST" enctype="multipart/form-data">
+                        <!-- Student Selection -->
+                        <div class="student-select">
+                            <label for="student_id" class="form-label">
+                                <i class="fas fa-user"></i> Select Student
+                            </label>
+                            <select name="student_id" id="student_id" class="form-select" required>
+                                <option value="">Choose a student...</option>
+                                {% for student in students %}
+                                <option value="{{ student.student_id }}">
+                                    {{ student.name }} ({{ student.student_id }}) - {{ student.class_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- File Upload Area -->
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5>Drag & Drop Face Images Here</h5>
+                            <p class="text-muted">or click to browse files</p>
+                            <input type="file" id="faceImages" name="face_images" multiple accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('faceImages').click();">
+                                <i class="fas fa-folder-open"></i> Browse Files
+                            </button>
+                            <p class="mt-2 small text-muted">
+                                Supported formats: JPG, PNG, JPEG | Max size: 5MB per image
+                            </p>
+                        </div>
+
+                        <!-- Image Previews -->
+                        <div class="preview-container" id="previewContainer"></div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
+                                <i class="fas fa-user-check"></i> Register Face Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guidelines and Information -->
+        <div class="col-lg-4">
+            <!-- Face Image Guidelines -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-info-circle"></i> Face Image Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="face-guidelines">
+                        <h6><i class="fas fa-check-circle text-success"></i> Requirements:</h6>
+                        <ul class="small">
+                            <li>Minimum 3 clear face images</li>
+                            <li>Face should be clearly visible</li>
+                            <li>Good lighting conditions</li>
+                            <li>Different angles (front, slight left, slight right)</li>
+                            <li>Natural facial expression</li>
+                            <li>No sunglasses or masks</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="face-guidelines mt-3">
+                        <h6><i class="fas fa-times-circle text-danger"></i> Avoid:</h6>
+                        <ul class="small">
+                            <li>Blurry or low-quality images</li>
+                            <li>Multiple faces in one image</li>
+                            <li>Extreme lighting conditions</li>
+                            <li>Face partially covered</li>
+                            <li>Very small face in image</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camera Capture Option -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-camera"></i> Live Camera Capture
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted">Alternatively, use your camera to capture face images directly</p>
+                    <button type="button" class="btn btn-success" id="startCameraBtn">
+                        <i class="fas fa-video"></i> Start Camera
+                    </button>
+                    
+                    <!-- Camera Preview (hidden by default) -->
+                    <div id="cameraSection" style="display: none;" class="mt-3">
+                        <video id="cameraPreview" class="camera-preview" autoplay></video>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-primary" id="captureBtn">
+                                <i class="fas fa-camera"></i> Capture
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="stopCameraBtn">
+                                <i class="fas fa-stop"></i> Stop Camera
+                            </button>
+                        </div>
+                        <canvas id="captureCanvas" style="display: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-bar"></i> Registration Statistics
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <h4 class="text-primary">{{ students|length }}</h4>
+                        <p class="text-muted">Students pending registration</p>
+                        
+                        {% if students|length > 0 %}
+                            <div class="progress mt-3">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 100%"></div>
+                            </div>
+                            <small class="text-muted">Complete face registration to enable AI attendance</small>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i>
+                                All students have registered faces!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let selectedFiles = [];
+    let stream = null;
+
+    // File upload handling
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('faceImages');
+    const previewContainer = document.getElementById('previewContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const studentSelect = document.getElementById('student_id');
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        handleFiles(files);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        handleFiles(files);
+    });
+
+    // Student selection change
+    studentSelect.addEventListener('change', updateSubmitButton);
+
+    function handleFiles(files) {
+        files.forEach(file => {
+            if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+                selectedFiles.push(file);
+                createPreview(file);
+            } else {
+                alert('Please select valid image files under 5MB.');
+            }
+        });
+        updateSubmitButton();
+        updateSteps();
+    }
+
+    function createPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            previewItem.innerHTML = `
+                <img src="${e.target.result}" alt="Face preview">
+                <button type="button" class="remove-btn" onclick="removePreview(this, '${file.name}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewContainer.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    window.removePreview = function(button, fileName) {
+        selectedFiles = selectedFiles.filter(file => file.name !== fileName);
+        button.parentElement.remove();
+        updateSubmitButton();
+        updateSteps();
+    };
+
+    function updateSubmitButton() {
+        const hasStudent = studentSelect.value !== '';
+        const hasMinImages = selectedFiles.length >= 3;
+        submitBtn.disabled = !(hasStudent && hasMinImages);
+    }
+
+    function updateSteps() {
+        // Update step indicators
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+
+        if (studentSelect.value) {
+            step1.classList.add('completed');
+        } else {
+            step1.classList.remove('completed');
+        }
+
+        if (selectedFiles.length >= 3) {
+            step2.classList.add('completed');
+        } else {
+            step2.classList.remove('completed');
+        }
+
+        if (studentSelect.value && selectedFiles.length >= 3) {
+            step3.classList.add('completed');
+        } else {
+            step3.classList.remove('completed');
+        }
+    }
+
+    // Camera functionality
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const cameraSection = document.getElementById('cameraSection');
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.getElementById('captureCanvas');
+
+    startCameraBtn.addEventListener('click', startCamera);
+    stopCameraBtn.addEventListener('click', stopCamera);
+    captureBtn.addEventListener('click', captureImage);
+
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 400, height: 300 } 
+            });
+            video.srcObject = stream;
+            cameraSection.style.display = 'block';
+            startCameraBtn.style.display = 'none';
+        } catch (err) {
+            alert('Error accessing camera: ' + err.message);
+        }
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        cameraSection.style.display = 'none';
+        startCameraBtn.style.display = 'block';
+    }
+
+    function captureImage() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        
+        canvas.toBlob(blob => {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            selectedFiles.push(file);
+            createPreview(file);
+            updateSubmitButton();
+            updateSteps();
+        }, 'image/jpeg', 0.9);
+    }
+
+    // Form submission
+    document.getElementById('faceRegistrationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (selectedFiles.length < 3) {
+            alert('Please upload at least 3 face images.');
+            return;
+        }
+
+        // Create FormData with selected files
+        const formData = new FormData();
+        formData.append('student_id', studentSelect.value);
+        
+        selectedFiles.forEach(file => {
+            formData.append('face_images', file);
+        });
+
+        // Show loading
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+
+        // Submit form
+        fetch(this.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(data => {
+            // Redirect to show flash messages
+            window.location.reload();
+        })
+        .catch(error => {
+            alert('Error during registration: ' + error.message);
+            submitBtn.innerHTML = '<i class="fas fa-user-check"></i> Register Face Data';
+            updateSubmitButton();
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+myenv/
+.venv/
+
+# Environment
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite3
+database/*.db
+
+# Uploads
+uploads/faces/*
+!uploads/faces/.keep
+uploads/documents/*
+!uploads/documents/.keep
+
+# Logs
+logs/*
+!logs/.keep
+
+# Temporary / Testing Outputs
+test_frames/
+outputs/
+backups/
+datasets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

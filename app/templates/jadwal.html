@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Jadwal Kuliah - Sistem Presensi Mahasiswa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-2 sidebar text-white p-0">
+            <div class="p-4">
+                <h5 class="mb-4">
+                    <i class="bi bi-person-check-fill me-2"></i>
+                    Presensi System
+                </h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white-50" href="{{ url_for('main.dashboard') }}">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.mahasiswa') }}">
+                        <i class="bi bi-people me-2"></i>Mahasiswa
+                    </a>
+                    <a class="nav-link text-white active" href="{{ url_for('main.jadwal') }}">
+                        <i class="bi bi-calendar-event me-2"></i>Jadwal
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.presensi') }}">
+                        <i class="bi bi-clipboard-check me-2"></i>Presensi
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.rekapitulasi_presensi') }}">
+                        <i class="bi bi-bar-chart-line me-2"></i>Rekapitulasi
+                    </a>
+                    <a class="nav-link text-white-50" href="{{ url_for('main.laporan_presensi') }}">
+                        <i class="bi bi-file-text me-2"></i>Laporan
+                    </a>
+                </nav>
+            </div>
+            <div class="mt-auto p-4">
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-2"></i>
+                        {{ session.username or 'Admin' }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Jadwal Kuliah</h1>
+                <a href="{{ url_for('main.tambah_jadwal') }}" class="btn btn-primary">
+                    <i class="bi bi-calendar-plus me-2"></i>Tambah Jadwal
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% if not error %}
+            <!-- Filter Bar -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <select class="form-select" id="classFilter">
+                                <option value="">Semua Kelas</option>
+                                {% for class_name in available_classes %}
+                                    <option value="{{ class_name }}">{{ class_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="dayFilter">
+                                <option value="">Semua Hari</option>
+                                <option value="Senin">Senin</option>
+                                <option value="Selasa">Selasa</option>
+                                <option value="Rabu">Rabu</option>
+                                <option value="Kamis">Kamis</option>
+                                <option value="Jumat">Jumat</option>
+                                <option value="Sabtu">Sabtu</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="semesterFilter">
+                                <option value="">Semua Semester</option>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                                <option value="3">Semester 3</option>
+                                <option value="4">Semester 4</option>
+                                <option value="5">Semester 5</option>
+                                <option value="6">Semester 6</option>
+                                <option value="7">Semester 7</option>
+                                <option value="8">Semester 8</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Cari mata kuliah...">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedules Table -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-event-fill me-2"></i>
+                        Daftar Jadwal Kuliah
+                    </h5>
+                    <span class="badge bg-primary" id="scheduleCount">{{ schedules|length }} Jadwal</span>
+                </div>
+                <div class="card-body">
+                    {% if schedules %}
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="scheduleTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Hari</th>
+                                        <th>Waktu</th>
+                                        <th>Mata Kuliah</th>
+                                        <th>Kode</th>
+                                        <th>Kelas</th>
+                                        <th>Dosen</th>
+                                        <th>Ruang</th>
+                                        <th>SKS</th>
+                                        <th>Semester</th>
+                                        <th>Tahun Akademik</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in schedules %}
+                                    <tr data-day="{{ schedule.day }}" data-semester="{{ schedule.semester }}" data-course="{{ schedule.course_name|lower }}" data-class="{{ schedule.class_name }}">
+                                        <td>
+                                            <span class="badge bg-info">{{ schedule.day }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ schedule.time_start|format_time }}</strong><br>
+                                            <small class="text-muted">{{ schedule.time_end|format_time }}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{{ schedule.course_name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ schedule.course_code }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ schedule.class_name }}</span>
+                                        </td>
+                                        <td>{{ schedule.teacher_name }}</td>
+                                        <td>
+                                            {% if schedule.room %}
+                                                <i class="bi bi-geo-alt me-1"></i>{{ schedule.room }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ schedule.credits }} SKS</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning text-dark">{{ schedule.semester }}</span>
+                                        </td>
+                                        <td>{{ schedule.academic_year }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="confirmDelete({{ schedule.id }}, '{{ schedule.course_name }} - {{ schedule.class_name }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-calendar-x" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Belum ada jadwal kuliah</h4>
+                            <p>Klik tombol "Tambah Jadwal" untuk menambah jadwal baru</p>
+                            <a href="{{ url_for('main.tambah_jadwal') }}" class="btn btn-primary">
+                                <i class="bi bi-calendar-plus me-2"></i>Tambah Jadwal
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Error State -->
+            <div class="text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">Tidak dapat terhubung ke database</h3>
+                <p class="text-muted">Pastikan database MySQL sudah berjalan dan konfigurasi benar.</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Anda yakin ingin menghapus jadwal <strong id="scheduleName"></strong>?</p>
+                <p class="text-danger"><small>Data yang dihapus tidak dapat dikembalikan.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <a href="#" id="deleteLink" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Hapus
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(scheduleId, scheduleName) {
+    document.getElementById('scheduleName').textContent = scheduleName;
+    document.getElementById('deleteLink').href = `/jadwal/hapus/${scheduleId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Filter functionality
+function filterTable() {
+    const classFilter = document.getElementById('classFilter').value;
+    const dayFilter = document.getElementById('dayFilter').value;
+    const semesterFilter = document.getElementById('semesterFilter').value;
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#scheduleTable tbody tr');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const classValue = row.getAttribute('data-class');
+        const day = row.getAttribute('data-day');
+        const semester = row.getAttribute('data-semester');
+        const course = row.getAttribute('data-course');
+
+        let showRow = true;
+
+        // Filter by class
+        if (classFilter && classValue !== classFilter) {
+            showRow = false;
+        }
+
+        // Filter by day
+        if (dayFilter && day !== dayFilter) {
+            showRow = false;
+        }
+
+        // Filter by semester
+        if (semesterFilter && semester !== semesterFilter) {
+            showRow = false;
+        }
+
+        // Filter by search
+        if (searchInput && !course.includes(searchInput)) {
+            showRow = false;
+        }
+
+        if (showRow) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Update count
+    document.getElementById('scheduleCount').textContent = `${visibleCount} Jadwal`;
+}
+
+function clearFilters() {
+    document.getElementById('classFilter').value = '';
+    document.getElementById('dayFilter').value = '';
+    document.getElementById('semesterFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    filterTable();
+}
+
+// Add event listeners
+document.getElementById('classFilter').addEventListener('change', filterTable);
+document.getElementById('dayFilter').addEventListener('change', filterTable);
+document.getElementById('semesterFilter').addEventListener('change', filterTable);
+document.getElementById('searchInput').addEventListener('input', filterTable);
+</script>
+{% endblock %}

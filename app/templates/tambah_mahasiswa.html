@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah Mahasiswa - Sistem Presensi Mahasiswa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        {% include 'sidebar.html' %}
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Tambah Mahasiswa Baru</h1>
+                <a href="{{ url_for('main.mahasiswa') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Kembali
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-plus me-2"></i>
+                                Form Data Mahasiswa
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="student_id" class="form-label">NIM <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="student_id" name="student_id" 
+                                               placeholder="Contoh: 2023001" required>
+                                        <div class="form-text">Nomor Induk Mahasiswa harus unik</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="name" class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="name" name="name" 
+                                               placeholder="Contoh: Ahmad Wijaya" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" 
+                                               placeholder="Contoh: ahmad@student.edu">
+                                        <div class="form-text">Email akan digunakan untuk notifikasi</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="phone" class="form-label">Nomor Telepon</label>
+                                        <input type="tel" class="form-control" id="phone" name="phone" 
+                                               placeholder="Contoh: 081234567890">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="class_year" class="form-label">Tahun Angkatan <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="class_year" name="class_year" required>
+                                            <option value="">Pilih Tahun Angkatan</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2023">2023</option>
+                                            <option value="2022">2022</option>
+                                            <option value="2021">2021</option>
+                                            <option value="2020">2020</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="program_study_id" class="form-label">Program Studi <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="program_study_id" name="program_study_id" required>
+                                            <option value="">Pilih Program Studi</option>
+                                            <option value="1">Teknik Informatika (TI)</option>
+                                            <option value="2">Sistem Informasi (SI)</option>
+                                            <option value="3">Teknik Komputer (TK)</option>
+                                            <option value="4">Ilmu Komputer (IK)</option>
+                                            <option value="5">Teknik Elektro (TE)</option>
+                                            <option value="6">Manajemen Informatika (MI)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="department" class="form-label">Jurusan <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="department" name="department" required>
+                                            <option value="">Pilih Jurusan</option>
+                                            <option value="Fakultas Teknik">Fakultas Teknik</option>
+                                            <option value="Fakultas Ilmu Komputer">Fakultas Ilmu Komputer</option>
+                                            <option value="Fakultas Teknologi Informasi">Fakultas Teknologi Informasi</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="semester" class="form-label">Semester <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="semester" name="semester" required>
+                                            <option value="">Pilih Semester</option>
+                                            <option value="1">Semester 1</option>
+                                            <option value="2">Semester 2</option>
+                                            <option value="3">Semester 3</option>
+                                            <option value="4">Semester 4</option>
+                                            <option value="5">Semester 5</option>
+                                            <option value="6">Semester 6</option>
+                                            <option value="7">Semester 7</option>
+                                            <option value="8">Semester 8</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="class_number" class="form-label">Nomor Kelas <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="class_number" name="class_number" required>
+                                            <option value="">Pilih Nomor</option>
+                                            <option value="1">Kelas 1</option>
+                                            <option value="2">Kelas 2</option>
+                                            <option value="3">Kelas 3</option>
+                                            <option value="4">Kelas 4</option>
+                                            <option value="5">Kelas 5</option>
+                                            <option value="6">Kelas 6</option>
+                                            <option value="7">Kelas 7</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-8 mb-3">
+                                        <label for="class_preview" class="form-label">Kelas <span class="text-muted">(otomatis)</span></label>
+                                        <input type="text" class="form-control" id="class_preview" readonly placeholder="Contoh: 1TI2">
+                                        <input type="hidden" id="class_name" name="class_name">
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('main.mahasiswa') }}" class="btn btn-secondary me-md-2">
+                                        <i class="bi bi-x-circle me-2"></i>Batal
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle me-2"></i>Simpan Mahasiswa
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Face Registration Card -->
+                    <div class="card mt-4" id="faceRegistrationCard" style="display: none;">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-camera me-2"></i>
+                                Registrasi Wajah (Opsional)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Face Recognition:</strong> Upload foto wajah untuk mengaktifkan presensi otomatis dengan AI.
+                                Anda dapat melakukan ini sekarang atau nanti di menu Face Recognition.
+                            </div>
+                            
+                            <form id="faceRegistrationForm" enctype="multipart/form-data">
+                                <input type="hidden" id="faceStudentId" name="student_id">
+                                
+                                <!-- Upload Area -->
+                                <div class="upload-area border-2 border-dashed border-info rounded p-4 text-center mb-3" id="uploadArea">
+                                    <i class="bi bi-cloud-upload text-info" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-3">Drag & Drop Foto Wajah</h5>
+                                    <p class="text-muted">atau klik untuk browse files</p>
+                                    <input type="file" id="faceImages" name="face_images" multiple accept="image/*" style="display: none;">
+                                    <button type="button" class="btn btn-outline-info" onclick="document.getElementById('faceImages').click();">
+                                        <i class="bi bi-folder2-open me-2"></i>Browse Files
+                                    </button>
+                                    <p class="mt-2 small text-muted">
+                                        Format: JPG, PNG, JPEG | Max: 5MB per foto | Minimal 1 foto
+                                    </p>
+                                </div>
+                                
+                                <!-- Guidelines -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="bg-light p-3 rounded">
+                                            <h6 class="text-success"><i class="bi bi-check-circle me-2"></i>Tips Foto yang Baik:</h6>
+                                            <ul class="small mb-0">
+                                                <li>Wajah terlihat jelas dan fokus</li>
+                                                <li>Pencahayaan yang cukup</li>
+                                                <li>Sudut berbeda (depan, kiri, kanan)</li>
+                                                <li>Ekspresi natural</li>
+                                                <li>Tanpa kacamata hitam/masker</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="bg-light p-3 rounded">
+                                            <h6 class="text-danger"><i class="bi bi-x-circle me-2"></i>Hindari:</h6>
+                                            <ul class="small mb-0">
+                                                <li>Foto buram atau gelap</li>
+                                                <li>Multiple wajah dalam satu foto</li>
+                                                <li>Pencahayaan ekstrem</li>
+                                                <li>Wajah tertutup sebagian</li>
+                                                <li>Foto terlalu kecil</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Image Previews -->
+                                <div class="preview-container d-flex flex-wrap gap-3 mb-3" id="previewContainer"></div>
+                                
+                                <!-- Camera Option -->
+                                <div class="text-center mb-3">
+                                    <button type="button" class="btn btn-success me-2" id="startCameraBtn">
+                                        <i class="bi bi-camera me-2"></i>Gunakan Kamera
+                                    </button>
+                                    <span class="text-muted">atau gunakan kamera untuk foto langsung</span>
+                                </div>
+                                
+                                <!-- Camera Section (hidden by default) -->
+                                <div id="cameraSection" style="display: none;" class="text-center mb-3">
+                                    <video id="cameraPreview" width="320" height="240" autoplay class="border rounded"></video>
+                                    <br>
+                                    <button type="button" class="btn btn-primary mt-2 me-2" id="captureBtn">
+                                        <i class="bi bi-camera me-2"></i>Ambil Foto
+                                    </button>
+                                    <button type="button" class="btn btn-secondary mt-2" id="stopCameraBtn">
+                                        <i class="bi bi-stop me-2"></i>Stop Kamera
+                                    </button>
+                                    <canvas id="captureCanvas" style="display: none;"></canvas>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                    <button type="button" class="btn btn-outline-secondary me-md-2" id="skipFaceRegistration">
+                                        <i class="bi bi-skip-forward me-2"></i>Lewati (Daftar Nanti)
+                                    </button>
+                                    <button type="submit" class="btn btn-info" id="registerFaceBtn" disabled>
+                                        <i class="bi bi-camera me-2"></i>Daftarkan Wajah
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Help Card -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Panduan Pengisian
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>NIM:</strong> Harus unik dan belum pernah digunakan</li>
+                                <li><strong>Nama:</strong> Nama lengkap sesuai dokumen resmi</li>
+                                <li><strong>Email:</strong> Akan digunakan untuk komunikasi sistem</li>
+                                <li><strong>Telepon:</strong> Nomor yang dapat dihubungi</li>
+                                <li><strong>Tahun Angkatan:</strong> Tahun masuk kuliah</li>
+                                <li><strong>Program Studi:</strong> Program studi yang diambil mahasiswa</li>
+                                <li><strong>Jurusan:</strong> Fakultas tempat program studi berada</li>
+                                <li><strong>Semester:</strong> Semester saat ini (1-8)</li>
+                                <li><strong>Nomor Kelas:</strong> Nomor kelas (1-5)</li>
+                                <li><strong>Kelas:</strong> Format otomatis: [Nomor][Singkatan Program Studi][Semester] (Contoh: 1TI2)</li>
+                                <li><strong>Face Registration:</strong> Upload 3-5 foto wajah untuk aktivasi AI attendance (opsional)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Program study abbreviations mapping
+const programAbbreviations = {
+    '1': 'TI',  // Teknik Informatika
+    '2': 'SI',  // Sistem Informasi
+    '3': 'TK',  // Teknik Komputer
+    '4': 'IK',  // Ilmu Komputer
+    '5': 'TE',  // Teknik Elektro
+    '6': 'MI'   // Manajemen Informatika
+};
+
+// Face registration variables
+let selectedFiles = [];
+let stream = null;
+let studentCreated = false;
+
+// Auto generate class code
+function updateClassPreview() {
+    const programStudyId = document.getElementById('program_study_id').value;
+    const semester = document.getElementById('semester').value;
+    const classNumber = document.getElementById('class_number').value;
+    
+    if (programStudyId && semester && classNumber) {
+        const abbreviation = programAbbreviations[programStudyId];
+        const classCode = classNumber + abbreviation + semester;
+        
+        document.getElementById('class_preview').value = classCode;
+        document.getElementById('class_name').value = classCode;
+    } else {
+        document.getElementById('class_preview').value = '';
+        document.getElementById('class_name').value = '';
+    }
+}
+
+// Add event listeners for auto-generation
+document.getElementById('program_study_id').addEventListener('change', updateClassPreview);
+document.getElementById('semester').addEventListener('change', updateClassPreview);
+document.getElementById('class_number').addEventListener('change', updateClassPreview);
+
+// Form validation and submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const studentId = document.getElementById('student_id').value;
+    const name = document.getElementById('name').value;
+    const classYear = document.getElementById('class_year').value;
+    const programStudyId = document.getElementById('program_study_id').value;
+    const department = document.getElementById('department').value;
+    const semester = document.getElementById('semester').value;
+    const classNumber = document.getElementById('class_number').value;
+    const className = document.getElementById('class_name').value;
+    
+    if (!studentId || !name || !classYear || !programStudyId || !department || !semester || !classNumber || !className) {
+        alert('Mohon isi semua field yang wajib diisi (*)');
+        return;
+    }
+    
+    // Simple NIM validation
+    if (studentId.length < 4) {
+        alert('NIM harus minimal 4 karakter');
+        return;
+    }
+    
+    // Submit student data
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        if (data.includes('alert-success') || data.includes('berhasil')) {
+            studentCreated = true;
+            // Show face registration section
+            document.getElementById('faceRegistrationCard').style.display = 'block';
+            document.getElementById('faceStudentId').value = studentId;
+            
+            // Scroll to face registration
+            document.getElementById('faceRegistrationCard').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+            
+            // Show success message
+            const alertHtml = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Mahasiswa berhasil ditambahkan! Sekarang Anda dapat mendaftarkan wajah untuk presensi AI.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.querySelector('.col-lg-8').insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Hide the original form
+            document.querySelector('form').style.display = 'none';
+            
+        } else {
+            // Handle error
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = data;
+            const errorAlert = tempDiv.querySelector('.alert-danger');
+            if (errorAlert) {
+                alert(errorAlert.textContent.trim());
+            } else {
+                alert('Terjadi kesalahan saat menyimpan data mahasiswa');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan jaringan');
+    });
+});
+
+// Auto format phone number
+document.getElementById('phone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.startsWith('0')) {
+        value = '62' + value.substring(1);
+    }
+    e.target.value = value;
+});
+
+// Face Registration Functions
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('faceImages');
+    const previewContainer = document.getElementById('previewContainer');
+    const registerFaceBtn = document.getElementById('registerFaceBtn');
+    const skipBtn = document.getElementById('skipFaceRegistration');
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const cameraSection = document.getElementById('cameraSection');
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.getElementById('captureCanvas');
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('border-success');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('border-success');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-success');
+        const files = Array.from(e.dataTransfer.files);
+        handleFiles(files);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        handleFiles(files);
+    });
+
+    // Handle uploaded files
+    function handleFiles(files) {
+        files.forEach(file => {
+            if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+                selectedFiles.push(file);
+                createPreview(file);
+            } else {
+                alert('Hanya file gambar dengan ukuran maksimal 5MB yang diperbolehkan.');
+            }
+        });
+        updateRegisterButton();
+    }
+
+    // Create image preview
+    function createPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'position-relative';
+            previewDiv.style.width = '120px';
+            previewDiv.style.height = '120px';
+            previewDiv.innerHTML = `
+                <img src="${e.target.result}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
+                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" 
+                        onclick="removePreview(this, '${file.name}')" 
+                        style="transform: translate(25%, -25%);">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            previewContainer.appendChild(previewDiv);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Remove preview
+    window.removePreview = function(button, fileName) {
+        selectedFiles = selectedFiles.filter(file => file.name !== fileName);
+        button.parentElement.remove();
+        updateRegisterButton();
+    };
+
+    // Update register button state
+    function updateRegisterButton() {
+        registerFaceBtn.disabled = selectedFiles.length < 1;
+        
+        if (selectedFiles.length >= 1) {
+            registerFaceBtn.innerHTML = `<i class="bi bi-camera me-2"></i>Daftarkan Wajah (${selectedFiles.length} foto)`;
+        } else {
+            registerFaceBtn.innerHTML = `<i class="bi bi-camera me-2"></i>Minimal 1 foto diperlukan`;
+        }
+    }
+
+    // Camera functionality
+    startCameraBtn.addEventListener('click', async function() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 320, height: 240 } 
+            });
+            video.srcObject = stream;
+            cameraSection.style.display = 'block';
+            startCameraBtn.style.display = 'none';
+        } catch (err) {
+            alert('Error accessing camera: ' + err.message);
+        }
+    });
+
+    stopCameraBtn.addEventListener('click', function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        cameraSection.style.display = 'none';
+        startCameraBtn.style.display = 'inline-block';
+    });
+
+    captureBtn.addEventListener('click', function() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        
+        canvas.toBlob(blob => {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            selectedFiles.push(file);
+            createPreview(file);
+            updateRegisterButton();
+        }, 'image/jpeg', 0.9);
+    });
+
+    // Face registration form submission
+    document.getElementById('faceRegistrationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (selectedFiles.length < 1) {
+            alert('Minimal 1 foto wajah diperlukan untuk registrasi.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('student_id', document.getElementById('faceStudentId').value);
+        
+        selectedFiles.forEach(file => {
+            formData.append('face_images', file);
+        });
+
+        // Show loading
+        registerFaceBtn.innerHTML = '<i class="bi bi-spinner spinner-border spinner-border-sm me-2"></i>Memproses...';
+        registerFaceBtn.disabled = true;
+
+        // Submit face registration
+        fetch('/face_recognition/register_face', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Success
+                const successHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                document.getElementById('faceRegistrationCard').insertAdjacentHTML('afterbegin', successHtml);
+                
+                // Hide face registration form
+                document.getElementById('faceRegistrationForm').style.display = 'none';
+                
+                // Show completion message
+                const completionHtml = `
+                    <div class="text-center p-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                        <h4 class="mt-3 text-success">Registrasi Lengkap!</h4>
+                        <p class="text-muted">Mahasiswa dan wajah telah berhasil didaftarkan.</p>
+                        <a href="{{ url_for('main.mahasiswa') }}" class="btn btn-primary me-2">
+                            <i class="bi bi-people me-2"></i>Lihat Daftar Mahasiswa
+                        </a>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-info">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </div>
+                `;
+                document.getElementById('faceRegistrationCard').insertAdjacentHTML('beforeend', completionHtml);
+                
+            } else {
+                // Handle error
+                alert(`Gagal mendaftarkan wajah: ${data.message}`);
+                registerFaceBtn.innerHTML = '<i class="bi bi-camera me-2"></i>Daftarkan Wajah';
+                updateRegisterButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat mendaftarkan wajah.');
+            registerFaceBtn.innerHTML = '<i class="bi bi-camera me-2"></i>Daftarkan Wajah';
+            registerFaceBtn.disabled = false;
+            updateRegisterButton();
+        });
+    });
+
+    // Skip face registration
+    skipBtn.addEventListener('click', function() {
+        const confirmSkip = confirm('Yakin ingin melewati registrasi wajah? Anda dapat mendaftarkan nanti di menu Face Recognition.');
+        if (confirmSkip) {
+            window.location.href = '{{ url_for("main.mahasiswa") }}';
+        }
+    });
+});
+</script>
+
+<!-- Additional CSS for face registration -->
+<style>
+.upload-area {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.upload-area:hover {
+    background-color: #f8f9fa;
+}
+.preview-container img {
+    border-radius: 8px;
+}
+#cameraPreview {
+    background: #000;
+}
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+</style>
+{% endblock %}

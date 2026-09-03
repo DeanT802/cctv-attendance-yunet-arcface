@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Print Layout</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 100%; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { border: 1px solid #000; padding: 5px; text-align: center; }
+        .table th { background-color: #f0f0f0; }
+        
+        @media print {
+            @page { size: A4 landscape; margin: 0.5in; }
+            body { font-size: 12px; }
+            .table { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REKAPITULASI PRESENSI MAHASISWA</h1>
+            <h2>Semester 1 Tahun Akademik 2024/2025</h2>
+        </div>
+        
+        <table style="width: 100%; margin-bottom: 20px;">
+            <tr>
+                <td><strong>Mata Kuliah:</strong> TI101 - Pemrograman Dasar</td>
+                <td><strong>SKS:</strong> 3</td>
+            </tr>
+            <tr>
+                <td><strong>Dosen:</strong> Dr. Budi Santoso</td>
+                <td><strong>Kelas:</strong> 1TK1</td>
+            </tr>
+        </table>
+        
+        <table class="table">
+            <thead>
+                <tr>
+                    <th rowspan="2">No</th>
+                    <th rowspan="2">Nama Mahasiswa</th>
+                    <th rowspan="2">NIM</th>
+                    <th colspan="16">Pertemuan Ke-</th>
+                    <th rowspan="2">Hadir</th>
+                    <th rowspan="2">Tidak Hadir</th>
+                    <th rowspan="2">%</th>
+                    <th rowspan="2">Ket</th>
+                </tr>
+                <tr>
+                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
+                    <th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td style="text-align: left;">Kevin Nugraha</td>
+                    <td>2024001</td>
+                    <td style="background-color: #d4edda;">✓</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>100%</td>
+                    <td>Baik</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td style="text-align: left;">Susanto Wahab</td>
+                    <td>20200881</td>
+                    <td style="background-color: #d4edda;">✓</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>100%</td>
+                    <td>Baik</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <strong>Keterangan:</strong>
+            ✓ = Hadir, ✗ = Tidak Hadir, - = Belum Ada Pertemuan
+        </div>
+    </div>
+    
+    <script>
+        function testPrint() {
+            window.print();
+        }
+    </script>
+    
+    <button onclick="testPrint()">Test Print</button>
+</body>
+</html>

@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan Presensi - Sistem Presensi Mahasiswa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        {% include 'sidebar.html' %}
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 main-content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Laporan Presensi</h1>
+                    <p class="text-muted mb-0">Statistik dan laporan kehadiran mahasiswa</p>
+                </div>
+                <a href="{{ url_for('main.presensi') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Kembali
+                </a>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% if not error %}
+            <!-- Filter Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filter Laporan
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('main.laporan_presensi') }}">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="class_name" class="form-label">Kelas</label>
+                                <select class="form-select" id="class_name" name="class_name">
+                                    <option value="">Semua Kelas</option>
+                                    {% for class_name in available_classes %}
+                                        <option value="{{ class_name }}" {{ 'selected' if class_name == selected_class else '' }}>
+                                            {{ class_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="start_date" class="form-label">Tanggal Mulai</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="end_date" class="form-label">Tanggal Selesai</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                            </div>
+                            
+                            <div class="col-md-3 mb-3 d-flex align-items-end">
+                                <div class="w-100">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="bi bi-search me-1"></i>Filter
+                                    </button>
+                                    <a href="{{ url_for('main.laporan_presensi') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Statistics Cards -->
+            {% if attendance_summary %}
+            {% set total_students = attendance_summary | sum(attribute='total_students') %}
+            {% set total_present = attendance_summary | sum(attribute='present_count') %}
+            {% set total_absent = attendance_summary | sum(attribute='absent_count') %}
+            {% set total_late = attendance_summary | sum(attribute='late_count') %}
+            {% set total_excused = attendance_summary | sum(attribute='excused_count') %}
+            {% set total_records = attendance_summary | sum(attribute='total_attendance_records') %}
+            {% set overall_percentage = (total_present / total_records * 100) if total_records > 0 else 0 %}
+            
+            <div class="row mb-4">
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ total_students }}</h4>
+                            <p class="mb-0 small">Total Mahasiswa</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card-green h-100">
+                        <div class="card-body text-center text-white">
+                            <i class="bi bi-check-circle-fill" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ total_present }}</h4>
+                            <p class="mb-0 small">Hadir</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card-red h-100">
+                        <div class="card-body text-center text-white">
+                            <i class="bi bi-x-circle-fill" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ total_absent }}</h4>
+                            <p class="mb-0 small">Tidak Hadir</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card-orange h-100">
+                        <div class="card-body text-center text-white">
+                            <i class="bi bi-clock-fill" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ total_late }}</h4>
+                            <p class="mb-0 small">Terlambat</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card-blue h-100">
+                        <div class="card-body text-center text-white">
+                            <i class="bi bi-file-text-fill" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ total_excused }}</h4>
+                            <p class="mb-0 small">Izin</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                    <div class="card stat-card-purple h-100">
+                        <div class="card-body text-center text-white">
+                            <i class="bi bi-percent" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-1">{{ "%.1f"|format(overall_percentage) }}%</h4>
+                            <p class="mb-0 small">Kehadiran</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Checkpoint Statistics Card -->
+            {% if checkpoint_stats and checkpoint_stats.total_with_checkpoints > 0 %}
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-repeat me-2 text-info"></i>
+                        Statistik Multiple Check-in
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-check2-all text-info" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ checkpoint_stats.total_with_checkpoints or 0 }}</h4>
+                                    <p class="mb-0 small">Total dengan Checkpoint</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-success text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-star-fill" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ checkpoint_stats.full_count or 0 }}</h4>
+                                    <p class="mb-0 small">Full (100%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-info text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-hand-thumbs-up-fill" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ checkpoint_stats.good_count or 0 }}</h4>
+                                    <p class="mb-0 small">Good (≥75%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-warning text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ checkpoint_stats.partial_count or 0 }}</h4>
+                                    <p class="mb-0 small">Partial (≥50%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-danger text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-x-octagon-fill" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ checkpoint_stats.poor_count or 0 }}</h4>
+                                    <p class="mb-0 small">Poor (<50%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-primary text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-graph-up-arrow" style="font-size: 2rem;"></i>
+                                    <h4 class="mt-2 mb-1">{{ "%.1f"|format(checkpoint_stats.avg_checkpoint_completion or 0) }}%</h4>
+                                    <p class="mb-0 small">Rata-rata Checkpoint</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Checkpoint Completion Breakdown -->
+                    <div class="mt-3">
+                        <h6 class="mb-3"><i class="bi bi-pie-chart me-2"></i>Distribusi Status Checkpoint</h6>
+                        <div class="progress" style="height: 30px;">
+                            {% set total_checkpoint_records = (checkpoint_stats.full_count or 0) + (checkpoint_stats.good_count or 0) + (checkpoint_stats.partial_count or 0) + (checkpoint_stats.poor_count or 0) %}
+                            {% if total_checkpoint_records > 0 %}
+                                {% set full_pct = ((checkpoint_stats.full_count or 0) / total_checkpoint_records * 100) %}
+                                {% set good_pct = ((checkpoint_stats.good_count or 0) / total_checkpoint_records * 100) %}
+                                {% set partial_pct = ((checkpoint_stats.partial_count or 0) / total_checkpoint_records * 100) %}
+                                {% set poor_pct = ((checkpoint_stats.poor_count or 0) / total_checkpoint_records * 100) %}
+                                
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ full_pct }}%" 
+                                     aria-valuenow="{{ full_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                    {% if full_pct > 10 %}{{ "%.0f"|format(full_pct) }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: {{ good_pct }}%" 
+                                     aria-valuenow="{{ good_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                    {% if good_pct > 10 %}{{ "%.0f"|format(good_pct) }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-warning" role="progressbar" 
+                                     style="width: {{ partial_pct }}%" 
+                                     aria-valuenow="{{ partial_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                    {% if partial_pct > 10 %}{{ "%.0f"|format(partial_pct) }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-danger" role="progressbar" 
+                                     style="width: {{ poor_pct }}%" 
+                                     aria-valuenow="{{ poor_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                    {% if poor_pct > 10 %}{{ "%.0f"|format(poor_pct) }}%{% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2 text-center">
+                            <small class="me-3"><span class="badge bg-success">Full</span> 100%</small>
+                            <small class="me-3"><span class="badge bg-info">Good</span> ≥75%</small>
+                            <small class="me-3"><span class="badge bg-warning">Partial</span> ≥50%</small>
+                            <small><span class="badge bg-danger">Poor</span> <50%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Detailed Table -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>
+                        Detail Laporan per Kelas
+                    </h5>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm me-2" onclick="exportToExcel()">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="exportToPDF()">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if attendance_summary %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="attendanceTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Kelas</th>
+                                    <th>Total Mahasiswa</th>
+                                    <th>Total Record</th>
+                                    <th>Hadir</th>
+                                    <th>Tidak Hadir</th>
+                                    <th>Terlambat</th>
+                                    <th>Izin</th>
+                                    <th>Persentase Kehadiran</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in attendance_summary %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><strong>{{ stat.class_name }}</strong></td>
+                                    <td>{{ stat.total_students or 0 }}</td>
+                                    <td>{{ stat.total_attendance_records or 0 }}</td>
+                                    <td><span class="badge bg-success">{{ stat.present_count or 0 }}</span></td>
+                                    <td><span class="badge bg-danger">{{ stat.absent_count or 0 }}</span></td>
+                                    <td><span class="badge bg-warning">{{ stat.late_count or 0 }}</span></td>
+                                    <td><span class="badge bg-info">{{ stat.excused_count or 0 }}</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 80px; height: 15px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: {{ stat.attendance_percentage or 0 }}%">
+                                                </div>
+                                            </div>
+                                            <span class="fw-bold">{{ "%.1f"|format(stat.attendance_percentage or 0) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if (stat.attendance_percentage or 0) >= 90 %}
+                                            <span class="badge bg-success">Excellent</span>
+                                        {% elif (stat.attendance_percentage or 0) >= 80 %}
+                                            <span class="badge bg-primary">Good</span>
+                                        {% elif (stat.attendance_percentage or 0) >= 70 %}
+                                            <span class="badge bg-warning">Fair</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Poor</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-clipboard-x" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Tidak ada data presensi ditemukan</p>
+                        <p class="small">Coba ubah filter atau periode waktu</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Detailed Attendance with Checkpoints Table -->
+            {% if attendance_details %}
+            <div class="card mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check me-2"></i>
+                        Detail Presensi dengan Checkpoint
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm" id="detailTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>No</th>
+                                    <th>NIM</th>
+                                    <th>Nama</th>
+                                    <th>Kelas</th>
+                                    <th>Mata Kuliah</th>
+                                    <th>Pertemuan</th>
+                                    <th>Tanggal</th>
+                                    <th>Status</th>
+                                    <th>Checkpoint</th>
+                                    <th>Metode</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_details %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><strong>{{ record.nim }}</strong></td>
+                                    <td>{{ record.student_name }}</td>
+                                    <td><span class="badge bg-secondary">{{ record.class_name }}</span></td>
+                                    <td>{{ record.course_name }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-dark">{{ record.meeting_number }}</span>
+                                    </td>
+                                    <td>{{ record.meeting_date.strftime('%d-%m-%Y') if record.meeting_date else '-' }}</td>
+                                    <td>
+                                        {% if record.status == 'present' %}
+                                            <span class="badge bg-success">Hadir</span>
+                                        {% elif record.status == 'absent' %}
+                                            <span class="badge bg-danger">Tidak Hadir</span>
+                                        {% elif record.status == 'late' %}
+                                            <span class="badge bg-warning">Terlambat</span>
+                                        {% elif record.status == 'excused' %}
+                                            <span class="badge bg-info">Izin</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ record.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.checkpoint_enabled %}
+                                            {% if record.checkpoint_status == 'full' %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-star-fill me-1"></i>
+                                                    {{ record.checkpoints_completed or 0 }}/{{ record.total_checkpoints }} Full
+                                                </span>
+                                            {% elif record.checkpoint_status == 'good' %}
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-hand-thumbs-up me-1"></i>
+                                                    {{ record.checkpoints_completed or 0 }}/{{ record.total_checkpoints }} Good
+                                                </span>
+                                            {% elif record.checkpoint_status == 'partial' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                                    {{ record.checkpoints_completed or 0 }}/{{ record.total_checkpoints }} Partial
+                                                </span>
+                                            {% elif record.checkpoint_status == 'poor' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="bi bi-x-octagon me-1"></i>
+                                                    {{ record.checkpoints_completed or 0 }}/{{ record.total_checkpoints }} Poor
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    {{ record.checkpoints_completed or 0 }}/{{ record.total_checkpoints }}
+                                                </span>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock me-1"></i>{{ record.checkpoint_interval }}min interval
+                                            </small>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-dash-circle me-1"></i>N/A
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.attendance_method == 'face_recognition' %}
+                                            <span class="badge bg-primary">
+                                                <i class="bi bi-camera-video me-1"></i>Face Recognition
+                                            </span>
+                                        {% elif record.attendance_method == 'manual' %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-pencil me-1"></i>Manual
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">{{ record.attendance_method or '-' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.confidence_score %}
+                                            {% set confidence_pct = (record.confidence_score * 100) %}
+                                            {% if confidence_pct >= 90 %}
+                                                <span class="badge bg-success">{{ "%.1f"|format(confidence_pct) }}%</span>
+                                            {% elif confidence_pct >= 75 %}
+                                                <span class="badge bg-info">{{ "%.1f"|format(confidence_pct) }}%</span>
+                                            {% elif confidence_pct >= 60 %}
+                                                <span class="badge bg-warning">{{ "%.1f"|format(confidence_pct) }}%</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ "%.1f"|format(confidence_pct) }}%</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <!-- Error State -->
+            <div class="text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">Tidak dapat terhubung ke database</h3>
+                <p class="text-muted">Pastikan database MySQL sudah berjalan dan konfigurasi benar.</p>
+                <button class="btn btn-primary" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportToExcel() {
+    // Simple CSV export
+    const table = document.getElementById('attendanceTable');
+    let csv = [];
+    
+    // Headers
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    csv.push(headers.join(','));
+    
+    // Rows
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td => {
+            // Clean up cell content (remove badges, keep only text)
+            return td.textContent.trim().replace(/,/g, ';');
+        });
+        csv.push(cells.join(','));
+    });
+    
+    // Download
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'laporan_presensi.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function exportToPDF() {
+    // For now, open print dialog
+    window.print();
+}
+
+// Set max date to today for date inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start_date').max = today;
+    document.getElementById('end_date').max = today;
+});
+</script>
+
+<style>
+@media print {
+    .sidebar, .btn, .card-header .btn {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+.stat-card-red {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+}
+
+.stat-card-purple {
+    background: linear-gradient(45deg, #6f42c1, #5a3ca0);
+}
+</style>
+{% endblock %}
