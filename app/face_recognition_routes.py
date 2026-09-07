@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, Response, current_app
 import os
+import datetime
+import time
 from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
@@ -587,11 +589,11 @@ def recognize_attendance():
                 for face in all_faces:
                     print(f"[Attendance API]   - {face['name']}: {face['confidence']:.2%}")
             
-            # Security Check 1: Verify confidence (adjusted for IP camera - typically 55-65%)
-            if confidence < 0.50:
+            # Security Check 1: Verify confidence
+            if confidence < 0.45:
                 return jsonify({
                     'success': False,
-                    'message': f'⚠️ Recognition confidence too low: {confidence:.2%}. Please ensure good lighting and clear face.',
+                    'message': f'Confidence deteksi terlalu rendah ({confidence:.1%}). Pastikan pencahayaan cukup dan wajah menghadap kamera.',
                     'confidence': confidence,
                     'security_level': 'insufficient',
                     'reason': 'low_confidence'
@@ -601,7 +603,7 @@ def recognize_attendance():
             if liveness_details and not liveness_details.get('is_live', False):
                 return jsonify({
                     'success': False,
-                    'message': '🚨 SECURITY ALERT: Spoofing attempt detected! Please use your real face, not a photo.',
+                    'message': '🚨 SECURITY ALERT: Deteksi foto / spoofing terdeteksi! Gunakan wajah asli Anda.',
                     'spoofing_detected': True,
                     'liveness_details': liveness_details,
                     'security_breach': True
@@ -611,13 +613,12 @@ def recognize_attendance():
             if result.get('spoofing_detected', False):
                 return jsonify({
                     'success': False,
-                    'message': '🚨 SPOOFING DETECTED: ' + result.get('message', 'Please use your real face'),
+                    'message': '🚨 SPOOFING DETECTED: ' + result.get('message', 'Gunakan wajah asli'),
                     'spoofing_detected': True,
                     'security_breach': True
                 })
             
-            # All security checks passed - proceed with attendance
-            # Record attendance for ALL detected faces
+            # Connect to database
             db = Database()
             db.connect()
             
@@ -625,18 +626,18 @@ def recognize_attendance():
             faces_to_process = all_faces if multiple_faces and all_faces else [result['student']]
             recorded_students = []
             
-            # Get current active meeting
-            meetings_query = "SELECT id FROM course_meetings ORDER BY id DESC LIMIT 1"
-            meeting_result = db.execute_query(meetings_query)
-            meeting_id = meeting_result[0]['id'] if meeting_result else None
-            
-            if not meeting_id:
-                db.disconnect()
-                return jsonify({'success': False, 'message': 'No meetings found in database'})
+            # Check for current active meeting (optional for presensi bebas / uji coba)
+            meeting_id = None
+            try:
+                meetings_query = "SELECT id FROM course_meetings ORDER BY id DESC LIMIT 1"
+                meeting_result = db.execute_query(meetings_query)
+                if meeting_result and len(meeting_result) > 0:
+                    meeting_id = meeting_result[0]['id']
+            except Exception as me:
+                print(f"[Attendance API] Note: Course meetings query error: {me}")
             
             # Process each detected face
             for face_data in faces_to_process:
-                # Get student_id from face data
                 if isinstance(face_data, dict):
                     student_id_nim = face_data.get('student_id')
                     face_confidence = face_data.get('confidence', confidence)
@@ -649,89 +650,95 @@ def recognize_attendance():
                 if not student_id_nim:
                     continue
                     
-                # Get the actual student database ID from the student_id (NIM)
-                student_lookup_query = "SELECT id, name FROM students WHERE student_id = %s"
-                student_db_result = db.execute_query(student_lookup_query, (student_id_nim,))
+                # Look up student record from students table
+                student_name = face_name
+                actual_student_id = None
+                class_name = 'Umum'
+                department = 'Teknik Informatika'
+                profile_photo = None
                 
-                if not student_db_result:
-                    print(f"[Attendance API] ⚠️ Student with ID {student_id_nim} not found in database")
-                    continue
+                try:
+                    student_lookup_query = "SELECT id, name, class_name, department, profile_photo FROM students WHERE student_id = %s"
+                    student_db_result = db.execute_query(student_lookup_query, (student_id_nim,))
+                    
+                    if student_db_result and len(student_db_result) > 0:
+                        actual_student_id = student_db_result[0]['id']
+                        student_name = student_db_result[0]['name']
+                        class_name = student_db_result[0].get('class_name') or 'Umum'
+                        department = student_db_result[0].get('department') or 'Teknik Informatika'
+                        profile_photo = student_db_result[0].get('profile_photo')
+                    else:
+                        print(f"[Attendance API] Student {student_id_nim} recognized from embeddings, student row not in DB")
+                except Exception as de:
+                    print(f"[Attendance API] Database student lookup error: {de}")
                 
-                actual_student_id = student_db_result[0]['id']
-                student_name = student_db_result[0]['name']
-            
-                # Check if already marked today for this meeting
-                check_query = """
-                SELECT id FROM attendance 
-                WHERE student_id = %s 
-                AND meeting_id = %s
-                """
-                existing = db.execute_query(check_query, (actual_student_id, meeting_id))
-                
-                # Convert confidence to Python float to avoid MySQL conversion issues
                 confidence_value = float(face_confidence)
                 
-                if existing:
-                    # Update existing attendance instead of creating new one
-                    update_query = """
-                    UPDATE attendance 
-                    SET attendance_method = 'face_recognition',
-                        confidence_score = %s,
-                        notes = %s,
-                        attendance_time = NOW(),
-                        status = 'present'
-                    WHERE id = %s
-                    """
-                    
-                    attendance_result = db.execute_query(update_query, (
-                        confidence_value,
-                        f"Face recognition attendance - Confidence: {confidence_value:.2f}",
-                        existing[0]['id']
-                    ))
-                    print(f"[Attendance API] ✅ Updated attendance for {student_name}")
-                    
-                else:
-                    # Insert new attendance record
-                    insert_query = """
-                    INSERT INTO attendance (student_id, meeting_id, session_id, attendance_time, 
-                                          status, attendance_method, confidence_score, notes, marked_by, is_valid)
-                    VALUES (%s, %s, %s, NOW(), 'present', 'face_recognition', %s, %s, %s, 1)
-                    """
-                    
-                    session_id = None  # Use NULL for session_id to avoid foreign key constraint
-                    marked_by = session.get('user_id', 1)  # Current user
-                    
-                    attendance_result = db.execute_query(insert_query, (
-                        actual_student_id,  # Use the actual database ID, not the student_id
-                        meeting_id,
-                        session_id,
-                        confidence_value,
-                        f"Face recognition attendance - Confidence: {confidence_value:.2f}",
-                        marked_by
-                    ))
-                    print(f"[Attendance API] ✅ Recorded attendance for {student_name}")
+                # If meeting_id exists and student is in database, record or update attendance
+                attendance_recorded = False
+                if meeting_id and actual_student_id:
+                    try:
+                        check_query = "SELECT id FROM attendance WHERE student_id = %s AND meeting_id = %s"
+                        existing = db.execute_query(check_query, (actual_student_id, meeting_id))
+                        
+                        if existing:
+                            update_query = """
+                            UPDATE attendance 
+                            SET attendance_method = 'face_recognition',
+                                confidence_score = %s,
+                                notes = %s,
+                                attendance_time = NOW(),
+                                status = 'present'
+                            WHERE id = %s
+                            """
+                            db.execute_query(update_query, (
+                                confidence_value,
+                                f"Presensi wajah terverifikasi - Confidence: {confidence_value:.2f}",
+                                existing[0]['id']
+                            ))
+                            attendance_recorded = True
+                            print(f"[Attendance API] Updated attendance record for {student_name}")
+                        else:
+                            insert_query = """
+                            INSERT INTO attendance (student_id, meeting_id, session_id, attendance_time, 
+                                                  status, attendance_method, confidence_score, notes, marked_by, is_valid)
+                            VALUES (%s, %s, %s, NOW(), 'present', 'face_recognition', %s, %s, %s, 1)
+                            """
+                            marked_by = session.get('user_id', 1)
+                            db.execute_query(insert_query, (
+                                actual_student_id,
+                                meeting_id,
+                                None,
+                                confidence_value,
+                                f"Presensi wajah terverifikasi - Confidence: {confidence_value:.2f}",
+                                marked_by
+                            ))
+                            attendance_recorded = True
+                            print(f"[Attendance API] Created attendance record for {student_name}")
+                    except Exception as ae:
+                        print(f"[Attendance API] Attendance recording warning (non-fatal): {ae}")
                 
-                # Add to recorded list
                 recorded_students.append({
                     'name': student_name,
                     'student_id': student_id_nim,
+                    'nim': student_id_nim,
                     'confidence': confidence_value,
-                    'id': actual_student_id,
+                    'id': actual_student_id or student_id_nim,
+                    'class_name': class_name,
+                    'department': department,
+                    'profile_photo': profile_photo,
                     'face_size': face_size_val,
-                    'lighting_score': lighting_score_val
+                    'lighting_score': lighting_score_val,
+                    'attendance_recorded': attendance_recorded
                 })
             
             db.disconnect()
             
-            print(f"[Attendance API] 📝 Attendance recorded successfully for {len(recorded_students)} student(s)")
-            
-            # Prepare response based on number of faces
+            # Response handling
             if len(recorded_students) > 1:
-                # Multiple faces detected and recorded
+                names_str = ", ".join([s['name'] for s in recorded_students])
+                message = f"✅ {len(recorded_students)} wajah teridentifikasi: {names_str}"
                 primary_student = recorded_students[0]
-                message = f"✅ {len(recorded_students)} wajah berhasil diidentifikasi: " + ", ".join([s['name'] for s in recorded_students])
-                
-                print(f"[Attendance API] Response: SUCCESS - {len(recorded_students)} faces")
                 
                 return jsonify({
                     'success': True,
@@ -740,42 +747,51 @@ def recognize_attendance():
                     'message': message,
                     'student': {
                         'name': primary_student['name'],
+                        'nama': primary_student['name'],
                         'student_id': primary_student['student_id'],
+                        'nim': primary_student['nim'],
+                        'class_name': primary_student['class_name'],
+                        'department': primary_student['department'],
                         'id': primary_student['id'],
-                        'nama': primary_student['name']
+                        'confidence': primary_student['confidence']
                     },
-                    'all_students': [{
-                        'name': s['name'],
-                        'student_id': s['student_id'],
-                        'id': s['id'],
-                        'nama': s['name'],
-                        'confidence': s['confidence'],
-                        'face_size': s.get('face_size', 0),
-                        'lighting_score': s.get('lighting_score', 0)
-                    } for s in recorded_students],
-                    'timestamp': result.get('timestamp', 'Now'),
-                    'confidence': result.get('confidence', 0.8)
+                    'all_students': recorded_students,
+                    'all_faces': recorded_students,
+                    'timestamp': result.get('timestamp') or datetime.datetime.now().strftime('%H:%M:%S'),
+                    'confidence': result.get('confidence', confidence)
                 })
             else:
-                # Single face detected and recorded
-                student_data = recorded_students[0] if recorded_students else result['student']
-                student_name = student_data.get('name', 'Unknown')
-                
-                print(f"[Attendance API] Response: SUCCESS - {student_name}")
+                student_data = recorded_students[0] if recorded_students else {
+                    'name': result['student'].get('name', 'Terdaftar'),
+                    'student_id': result['student'].get('student_id', ''),
+                    'nim': result['student'].get('student_id', ''),
+                    'class_name': 'Terdaftar',
+                    'department': 'Teknik Informatika',
+                    'id': result['student'].get('id', ''),
+                    'confidence': confidence
+                }
+                student_name = student_data.get('name', 'Mahasiswa Terdaftar')
+                conf_pct = student_data.get('confidence', confidence)
                 
                 return jsonify({
                     'success': True,
                     'multiple_faces': False,
                     'faces_detected': 1,
-                    'message': f"Presensi berhasil untuk {student_name}",
+                    'message': f"Wajah terdeteksi: {student_name} ({conf_pct:.1%})",
                     'student': {
                         'name': student_name,
-                        'student_id': student_data.get('student_id', result['student']['student_id']),
-                        'id': student_data.get('id', result['student'].get('id')),
-                        'nama': student_name
+                        'nama': student_name,
+                        'student_id': student_data.get('student_id', ''),
+                        'nim': student_data.get('nim', student_data.get('student_id', '')),
+                        'class_name': student_data.get('class_name', 'Umum'),
+                        'department': student_data.get('department', 'Teknik Informatika'),
+                        'id': student_data.get('id', ''),
+                        'confidence': conf_pct
                     },
-                    'timestamp': result.get('timestamp', 'Now'),
-                    'confidence': result.get('confidence', 0.8),
+                    'all_students': [student_data],
+                    'all_faces': [student_data],
+                    'timestamp': result.get('timestamp') or datetime.datetime.now().strftime('%H:%M:%S'),
+                    'confidence': conf_pct,
                     'face_size': result.get('face_size', 0),
                     'lighting_score': result.get('lighting_score', 0)
                 })

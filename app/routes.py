@@ -1695,17 +1695,40 @@ def check_ip_camera_presensi():
                 'message': 'RTSP URL not configured in .env file'
             })
         
-        # Try to connect to camera with timeout
-        print(f"[IP Camera Check] Attempting to connect to: {rtsp_url}")
-        test_camera = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+        # Fast socket probe before OpenCV to prevent thread blocking (max 0.8s)
+        import re, socket
+        match = re.search(r'@([^:/]+)(?::(\d+))?', rtsp_url)
+        if not match:
+            match = re.search(r'rtsp://([^:/]+)(?::(\d+))?', rtsp_url)
         
-        # Set timeout properties
-        test_camera.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000)  # 10 seconds timeout
-        test_camera.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 10000)  # 10 seconds read timeout
+        if match:
+            host = match.group(1)
+            port = int(match.group(2)) if match.group(2) else 554
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.8)  # 800ms non-blocking check
+                conn_res = sock.connect_ex((host, port))
+                sock.close()
+                if conn_res != 0:
+                    print(f"[IP Camera Check] Socket {host}:{port} unreachable (error code: {conn_res})")
+                    return jsonify({
+                        'available': False,
+                        'message': f'IP Camera ({host}:{port}) offline atau tidak terjangkau di jaringan ini.'
+                    })
+            except Exception as se:
+                print(f"[IP Camera Check] Socket error: {se}")
+                return jsonify({
+                    'available': False,
+                    'message': f'IP Camera host unreachable: {host}'
+                })
+
+        # Socket reached, now test OpenCV with short timeout
+        print(f"[IP Camera Check] Socket reached! Testing video capture: {rtsp_url}")
+        test_camera = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+        test_camera.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 2000)  # 2s timeout
+        test_camera.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 2000)
         
         if test_camera.isOpened():
-            print("[IP Camera Check] Connection opened, trying to read frame...")
-            # Test read a frame
             ret, frame = test_camera.read()
             test_camera.release()
             
@@ -1717,16 +1740,14 @@ def check_ip_camera_presensi():
                     'url': rtsp_url.split('@')[-1] if '@' in rtsp_url else 'configured'
                 })
             else:
-                print(f"[IP Camera Check] ERROR: Cannot read frames. ret={ret}, frame={frame is not None}")
                 return jsonify({
                     'available': False,
-                    'message': 'Connected but cannot read frames from camera. Try closing VLC or other apps using the camera.'
+                    'message': 'Connected but cannot read frames from camera.'
                 })
         else:
-            print("[IP Camera Check] ERROR: Cannot open camera connection")
             return jsonify({
                 'available': False,
-                'message': 'Cannot connect to IP camera. Check: 1) RTSP URL format, 2) Camera is online, 3) Network connection, 4) Close VLC/other apps'
+                'message': 'Cannot open camera stream from URL'
             })
             
     except Exception as e:
@@ -1974,3 +1995,25 @@ def api_connect_camera():
         
     result = find_camera_url(room_name, provided_code=verification_code)
     return jsonify(result)
+
+
+@main.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded face photos securely"""
+    from flask import send_from_directory, current_app
+    upload_dir = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads'))
+    return send_from_directory(upload_dir, filename)
+
+
+@main.route('/api/student_photo/<student_id>')
+def api_student_photo(student_id):
+    """Get sample photo for registered student"""
+    from flask import send_from_directory, current_app, abort
+    faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
+    student_dir = os.path.join(faces_dir, student_id)
+    if os.path.exists(student_dir):
+        files = [f for f in os.listdir(student_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        if files:
+            return send_from_directory(student_dir, files[0])
+    abort(404)
+

@@ -215,8 +215,28 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.jadwal') }}">
+                            <i class="fas fa-calendar-alt me-1"></i>Jadwal
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.presensi') }}">
+                            <i class="fas fa-clipboard-check me-1"></i>Presensi
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link active" href="{{ url_for('main.presensi_face') }}">
-                            <i class="fas fa-camera me-1"></i>Presensi Face
+                            <i class="fas fa-camera me-1"></i>Face Recognition
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.rekapitulasi_presensi') }}">
+                            <i class="fas fa-chart-bar me-1"></i>Rekapitulasi
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.laporan_presensi') }}">
+                            <i class="fas fa-file-alt me-1"></i>Laporan
                         </a>
                     </li>
                 </ul>
@@ -237,9 +257,9 @@
                 <!-- Status Card -->
                 <div class="status-card" id="statusCard">
                     <h2 class="mb-3">
-                        <i class="fas fa-robot me-3"></i>Presensi Real-Time dengan Face Recognition
+                        <i class="fas fa-user-check me-3"></i>Presensi Bebas & Uji Coba Face Recognition
                     </h2>
-                    <p class="mb-0 fs-5">Sistem akan otomatis mendeteksi dan mencatat presensi wajah Anda tanpa perlu menekan tombol</p>
+                    <p class="mb-0 fs-5">Sistem uji coba deteksi wajah & presensi real-time untuk seluruh mahasiswa yang terdaftar</p>
                 </div>
 
                 <!-- Main Content -->
@@ -274,24 +294,14 @@
                             
                             <div class="text-center mt-4">
                                 <button id="startCamera" class="btn btn-gradient me-3">
-                                    <i class="fas fa-video me-2"></i>Mulai Real-Time Recognition
+                                    <i class="fas fa-video me-2"></i>Mulai Deteksi Wajah
                                 </button>
                                 <button id="captureBtn" class="btn btn-success me-3" disabled>
-                                    <i class="fas fa-camera-retro me-2"></i>Capture Manual
-                                </button>
-                                <button id="debugBtn" class="btn btn-warning me-3" disabled>
-                                    <i class="fas fa-bug me-2"></i>Debug Mode
+                                    <i class="fas fa-camera-retro me-2"></i>Ambil Foto & Cek Wajah
                                 </button>
                                 <button id="stopCamera" class="btn btn-secondary" disabled>
                                     <i class="fas fa-stop me-2"></i>Stop Kamera
                                 </button>
-                            </div>
-                            
-                            <!-- Debug Result Panel -->
-                            <div id="debugPanel" class="alert alert-info mt-3" style="display: none;">
-                                <h6><i class="fas fa-microscope me-2"></i>Debug Detection Results</h6>
-                                <div id="debugInfo"></div>
-                                <img id="debugImage" class="img-fluid mt-2" style="display: none; border: 2px solid #0dcaf0; border-radius: 8px;">
                             </div>
                         </div>
                         
@@ -363,7 +373,7 @@
         let isProcessing = false;
         let realTimeProcessing = false;
         let lastRecognitionTime = 0;
-        let recognitionCooldown = 10000; // 10 seconds cooldown
+        let recognitionCooldown = 3000; // 3 seconds cooldown for responsive testing
         let processInterval;
         let cameraSource = 'webcam'; // Default to webcam
         let ipCameraInterval = null;
@@ -413,7 +423,6 @@
             // Event listeners
             document.getElementById('startCamera').addEventListener('click', startCamera);
             document.getElementById('captureBtn').addEventListener('click', captureAndRecognize);
-            document.getElementById('debugBtn').addEventListener('click', debugDetection);
             document.getElementById('stopCamera').addEventListener('click', stopCamera);
             document.getElementById('refreshHistory').addEventListener('click', loadAttendanceHistory);
         });
@@ -486,8 +495,7 @@
                     video.addEventListener('loadedmetadata', () => {
                         // Update UI
                         document.getElementById('startCamera').disabled = true;
-                        document.getElementById('captureBtn').style.display = 'none'; // Hide manual capture button
-                        document.getElementById('debugBtn').disabled = false; // Enable debug button
+                        document.getElementById('captureBtn').disabled = false;
                         document.getElementById('stopCamera').disabled = false;
                         
                         updateDetectionStatus('Kamera aktif - Memulai deteksi real-time', 'active');
@@ -545,8 +553,7 @@
                     
                     // Update UI
                     document.getElementById('startCamera').disabled = true;
-                    document.getElementById('captureBtn').style.display = 'none';
-                    document.getElementById('debugBtn').disabled = false; // Enable debug button for IP camera
+                    document.getElementById('captureBtn').disabled = false;
                     document.getElementById('stopCamera').disabled = false;
                     
                     // Start IP camera frame capture for face detection (SEPARATE from display)
@@ -612,127 +619,11 @@
             
             // Reset UI
             document.getElementById('startCamera').disabled = false;
-            document.getElementById('captureBtn').style.display = 'inline-block';
             document.getElementById('captureBtn').disabled = true;
-            document.getElementById('debugBtn').disabled = true;
             document.getElementById('stopCamera').disabled = true;
             
             updateDetectionStatus('Kamera berhenti', 'inactive');
-            console.log('✅ Camera stopped successfully - All loops terminated');
-        }
-        
-        async function debugDetection() {
-            console.log('[Debug Mode] Starting debug detection...');
-            
-            const debugBtn = document.getElementById('debugBtn');
-            const debugPanel = document.getElementById('debugPanel');
-            const debugInfo = document.getElementById('debugInfo');
-            const debugImage = document.getElementById('debugImage');
-            
-            debugBtn.disabled = true;
-            debugBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
-            
-            try {
-                const canvas = document.getElementById('canvas');
-                const video = document.getElementById('video');
-                const ipCameraImage = document.getElementById('ipCameraImage');
-                
-                // Determine source and capture frame
-                if (cameraSource === 'webcam' && video.srcObject) {
-                    // Capture from webcam
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0);
-                } else if (cameraSource === 'ipcamera' && ipCameraImage.src) {
-                    // Capture from IP camera
-                    canvas.width = ipCameraImage.naturalWidth;
-                    canvas.height = ipCameraImage.naturalHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(ipCameraImage, 0, 0);
-                } else {
-                    throw new Error('No active camera source');
-                }
-                
-                // Convert canvas to blob
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-                
-                // Send to debug endpoint
-                const formData = new FormData();
-                formData.append('image', blob, 'debug.jpg');
-                
-                const response = await fetch('/face_recognition/debug_detection', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Show debug panel
-                    debugPanel.style.display = 'block';
-                    
-                    // Display debug image with bounding boxes
-                    debugImage.src = data.debug_image;
-                    debugImage.style.display = 'block';
-                    
-                    // Build info HTML
-                    let infoHTML = `
-                        <div class="mb-2">
-                            <strong>🔍 Detection Method:</strong> <span class="badge bg-info">${data.detection_method || 'Unknown'}</span>
-                        </div>
-                        <div class="mb-2">
-                            <strong>👤 Wajah Terdeteksi:</strong> ${data.faces_detected}
-                        </div>
-                    `;
-                    
-                    // Show detection details
-                    if (data.detection_info && data.detection_info.length > 0) {
-                        infoHTML += '<div class="mt-2"><strong>Detail Deteksi:</strong><ul class="mb-0">';
-                        data.detection_info.forEach(face => {
-                            const matchIcon = face.matched ? '✅' : '❌';
-                            const matchText = face.matched ? 
-                                `<span class="text-success">MATCH: ${face.match} (${face.student_id})</span>` : 
-                                `<span class="text-danger">NO MATCH</span>`;
-                            
-                            infoHTML += `
-                                <li>
-                                    <strong>Face #${face.face_number}</strong><br>
-                                    Size: ${face.size_percentage} (${face.size_category})<br>
-                                    ${face.confidence ? `Confidence: ${face.confidence}<br>` : ''}
-                                    ${face.distance ? `Distance: ${face.distance}<br>` : ''}
-                                    ${matchIcon} ${matchText}
-                                </li>
-                            `;
-                        });
-                        infoHTML += '</ul></div>';
-                    }
-                    
-                    // Show recommendations
-                    if (data.recommendations && data.recommendations.length > 0) {
-                        infoHTML += '<div class="mt-3"><strong>Rekomendasi:</strong><ul class="mb-0">';
-                        data.recommendations.forEach(rec => {
-                            infoHTML += `<li>${rec}</li>`;
-                        });
-                        infoHTML += '</ul></div>';
-                    }
-                    
-                    debugInfo.innerHTML = infoHTML;
-                    
-                    console.log('[Debug Mode] Analysis complete:', data);
-                    showAlert('info', `Debug: ${data.faces_detected} wajah terdeteksi. Lihat detail di bawah.`);
-                } else {
-                    throw new Error(data.message || 'Debug detection failed');
-                }
-                
-            } catch (error) {
-                console.error('[Debug Mode] Error:', error);
-                showAlert('error', 'Debug gagal: ' + error.message);
-                debugPanel.style.display = 'none';
-            } finally {
-                debugBtn.disabled = false;
-                debugBtn.innerHTML = '<i class="fas fa-bug me-2"></i>Debug Mode';
-            }
+            console.log('Camera stopped successfully - All loops terminated');
         }
         
         // IP Camera detection loop - ASYNC NON-BLOCKING VERSION
@@ -1354,7 +1245,6 @@
                 showAlert('error', 'Gagal mengambil foto dari kamera.');
                 captureBtn.innerHTML = originalText;
                 captureBtn.disabled = false;
-                document.getElementById('debugBtn').disabled = false;
                 isProcessing = false;
             }
         }
@@ -1510,21 +1400,49 @@
                     contentDiv.innerHTML = facesHTML;
                     
                 } else {
-                    // SINGLE FACE - Original layout
+                    // SINGLE FACE - Modern rich student card layout
+                    const student = result.student;
+                    const nim = student.nim || student.student_id || '';
+                    const nama = student.nama || student.name || 'Mahasiswa Terdaftar';
+                    const className = student.class_name || 'Umum';
+                    const dept = student.department || 'Teknik Informatika';
+                    const confVal = result.confidence || 0.8;
+                    const confPct = (confVal * 100).toFixed(1);
+                    
+                    // Flash overlay border
+                    const overlay = document.getElementById('captureOverlay');
+                    if (overlay) {
+                        overlay.style.display = 'block';
+                        setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+                    }
+                    
                     contentDiv.innerHTML = `
-                        <div class="alert alert-success mb-0">
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
-                                    <i class="fas fa-user" style="font-size: 20px;"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong class="d-block">${result.student.nama || result.student.name}</strong>
-                                    <small>NIM: ${result.student.nim || result.student.student_id}</small><br>
-                                    <small>Waktu: ${result.timestamp || new Date().toLocaleTimeString('id-ID')}</small>
-                                    <div class="mt-1 d-flex flex-wrap gap-1">
-                                        ${result.confidence ? `<span class="badge bg-success">Conf: ${(result.confidence * 100).toFixed(1)}%</span>` : ''}
-                                        ${result.lighting_score ? `<span class="badge bg-secondary" title="Lighting Score"><i class="fas fa-lightbulb me-1"></i>${Math.round(result.lighting_score)}</span>` : ''}
-                                        ${result.face_size ? `<span class="badge bg-info text-dark" title="Face Size Ratio (Jarak)"><i class="fas fa-expand-arrows-alt me-1"></i>${(result.face_size * 100).toFixed(1)}%</span>` : ''}
+                        <div class="card border-0 shadow-sm" style="background: #f8fff9; border-left: 5px solid #28a745 !important; border-radius: 12px;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="position-relative me-3">
+                                        <img src="/api/student_photo/${nim}" 
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                             style="width: 58px; height: 58px; object-fit: cover; border-radius: 50%; border: 3px solid #28a745; box-shadow: 0 4px 10px rgba(0,0,0,0.15);" />
+                                        <div class="rounded-circle bg-success text-white align-items-center justify-content-center" 
+                                             style="width: 58px; height: 58px; display: none; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                                            <i class="fas fa-user-check"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <h6 class="mb-0 text-success fw-bold" style="font-size: 15px;">${nama}</h6>
+                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Terverifikasi</span>
+                                        </div>
+                                        <div class="text-muted small mb-2">
+                                            <span class="me-3"><strong>NIM:</strong> <code>${nim}</code></span>
+                                            <span><strong>Kelas:</strong> ${className}</span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                                            <span class="badge bg-primary"><i class="fas fa-shield-alt me-1"></i>Confidence: ${confPct}%</span>
+                                            <span class="badge bg-info text-dark"><i class="fas fa-graduation-cap me-1"></i>${dept}</span>
+                                            <span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>${result.timestamp || new Date().toLocaleTimeString('id-ID')}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1560,9 +1478,9 @@
                 card.className = 'status-card';
                 card.innerHTML = `
                     <h2 class="mb-3">
-                        <i class="fas fa-robot me-3"></i>Presensi Real-Time dengan Face Recognition
+                        <i class="fas fa-camera me-3"></i>Presensi Bebas & Uji Coba Face Recognition
                     </h2>
-                    <p class="mb-0 fs-5">Sistem akan otomatis mendeteksi dan mencatat presensi wajah Anda tanpa perlu menekan tombol</p>
+                    <p class="mb-0 fs-5">Sistem mendeteksi dan menguji coba pengenalan wajah untuk semua mahasiswa yang terdaftar</p>
                 `;
             }, 8000);
         }

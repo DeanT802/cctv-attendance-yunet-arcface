@@ -58,10 +58,10 @@ class YuNetFaceDetector:
                 self.nms_threshold,
                 self.top_k
             )
-            print(f"[YuNet] ✅ Model loaded successfully from {self.model_path}")
+            print(f"[YuNet] [OK] Model loaded successfully from {self.model_path}")
             print(f"[YuNet] Settings: conf={self.conf_threshold}, nms={self.nms_threshold}, top_k={self.top_k}")
         except Exception as e:
-            print(f"[YuNet] ❌ Failed to load model: {e}")
+            print(f"[YuNet] [FAIL] Failed to load model: {e}")
             raise
     
     def set_input_size(self, width, height):
@@ -82,7 +82,7 @@ class YuNetFaceDetector:
             List of face locations in (top, right, bottom, left) format (compatible with face_recognition)
         """
         if self.detector is None:
-            print("[YuNet] ⚠️ Detector not initialized")
+            print("[YuNet] [WARN] Detector not initialized")
             return []
         
         try:
@@ -130,7 +130,7 @@ class YuNetFaceDetector:
             return face_locations
             
         except Exception as e:
-            print(f"[YuNet] ❌ Detection error: {e}")
+            print(f"[YuNet] [FAIL] Detection error: {e}")
             return []
     
     def detect_with_landmarks(self, image, scale_factor=1.0):
@@ -191,7 +191,7 @@ class YuNetFaceDetector:
             return results
             
         except Exception as e:
-            print(f"[YuNet] ❌ Detection with landmarks error: {e}")
+            print(f"[YuNet] [FAIL] Detection with landmarks error: {e}")
             return []
     
     def set_confidence_threshold(self, threshold):

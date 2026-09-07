@@ -9,16 +9,16 @@
             <a class="nav-link text-white{% if request.endpoint == 'main.dashboard' %} active{% else %}-50{% endif %}" href="{{ url_for('main.dashboard') }}">
                 <i class="bi bi-speedometer2 me-2"></i>Dashboard
             </a>
-            <a class="nav-link text-white{% if request.endpoint == 'main.mahasiswa' %} active{% else %}-50{% endif %}" href="{{ url_for('main.mahasiswa') }}">
+            <a class="nav-link text-white{% if request.endpoint in ['main.mahasiswa', 'main.tambah_mahasiswa'] %} active{% else %}-50{% endif %}" href="{{ url_for('main.mahasiswa') }}">
                 <i class="bi bi-people me-2"></i>Mahasiswa
             </a>
-            <a class="nav-link text-white{% if request.endpoint == 'main.jadwal' %} active{% else %}-50{% endif %}" href="{{ url_for('main.jadwal') }}">
+            <a class="nav-link text-white{% if request.endpoint in ['main.jadwal', 'main.tambah_jadwal'] %} active{% else %}-50{% endif %}" href="{{ url_for('main.jadwal') }}">
                 <i class="bi bi-calendar-event me-2"></i>Jadwal
             </a>
             <a class="nav-link text-white{% if request.endpoint in ['main.presensi', 'main.ambil_presensi'] %} active{% else %}-50{% endif %}" href="{{ url_for('main.presensi') }}">
                 <i class="bi bi-clipboard-check me-2"></i>Presensi
             </a>
-            <a class="nav-link text-white{% if 'face_recognition' in request.endpoint %} active{% else %}-50{% endif %}" href="{{ url_for('face_recognition.face_recognition_dashboard') }}">
+            <a class="nav-link text-white{% if request.endpoint == 'main.presensi_face' or 'face_recognition' in request.endpoint %} active{% else %}-50{% endif %}" href="{{ url_for('main.presensi_face') }}">
                 <i class="bi bi-camera me-2"></i>Face Recognition
             </a>
             <a class="nav-link text-white{% if request.endpoint in ['main.rekapitulasi_presensi', 'main.detail_rekapitulasi_presensi'] %} active{% else %}-50{% endif %}" href="{{ url_for('main.rekapitulasi_presensi') }}">

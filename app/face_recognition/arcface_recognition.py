@@ -76,9 +76,9 @@ class CNNFaceRecognition:
         if YUNET_AVAILABLE:
             try:
                 self.yunet_detector = get_yunet_detector(conf_threshold=0.35)
-                print('[ArcFace] ✅ YuNet detector initialized')
+                print('[ArcFace] [OK] YuNet detector initialized')
             except Exception as e:
-                print(f'[ArcFace] ⚠️ YuNet init failed: {e}')
+                print(f'[ArcFace] [WARN] YuNet init failed: {e}')
 
         self.arcface_app = self._init_arcface_app()
         self.load_encodings()
@@ -107,6 +107,10 @@ class CNNFaceRecognition:
         if max_value is not None:
             result = min(max_value, result)
         return result
+
+    def is_model_loaded(self):
+        """Check if models are successfully loaded and ready."""
+        return hasattr(self, 'arcface_app') and self.arcface_app is not None
 
     def _init_arcface_app(self):
         import insightface
@@ -306,7 +310,7 @@ class CNNFaceRecognition:
     def _detect_faces_yunet(self, enhanced_bgr):
         """Run YuNet only. Do not use InsightFace internal detector here."""
         if self.yunet_detector is None:
-            print('[ArcFace] ❌ YuNet detector is not available')
+            print('[ArcFace] [FAIL] YuNet detector is not available')
             return []
     
         # ─── Resize gambar besar agar YuNet tidak false-positive ───
@@ -318,7 +322,7 @@ class CNNFaceRecognition:
             new_w = int(w / scale_back)
             new_h = int(h / scale_back)
             work_img = cv2.resize(enhanced_bgr, (new_w, new_h), interpolation=cv2.INTER_AREA)
-            print(f'[ArcFace] Resized {w}x{h} → {new_w}x{new_h} (scale_back={scale_back:.2f})')
+            print(f'[ArcFace] Resized {w}x{h} -> {new_w}x{new_h} (scale_back={scale_back:.2f})')
         else:
             work_img = enhanced_bgr
             scale_back = 1.0
@@ -326,7 +330,7 @@ class CNNFaceRecognition:
         # ─── Akses cv2.FaceDetectorYN langsung (punya landmarks raw) ───
         underlying = getattr(self.yunet_detector, 'detector', None)
         if underlying is None:
-            print('[ArcFace] ❌ underlying cv2.FaceDetectorYN not found')
+            print('[ArcFace] [FAIL] underlying cv2.FaceDetectorYN not found')
             return []
     
         try:
@@ -598,11 +602,11 @@ class CNNFaceRecognition:
                 print(f'[ArcFace] Face #{idx+1}: best_similarity={best_similarity:.4f}, confidence={confidence_score:.2%}, size={size_category}')
 
                 if best_similarity < min_similarity:
-                    print(f'[ArcFace] ❌ below similarity threshold: {best_similarity:.4f} < {min_similarity:.4f}')
+                    print(f'[ArcFace] [FAIL] below similarity threshold: {best_similarity:.4f} < {min_similarity:.4f}')
                     continue
 
                 if confidence_score < min_conf:
-                    print(f'[ArcFace] ❌ below adaptive confidence: {confidence_score:.2%} < {min_conf:.2%}')
+                    print(f'[ArcFace] [FAIL] below adaptive confidence: {confidence_score:.2%} < {min_conf:.2%}')
                     continue
 
                 student_info = self.known_face_names[best_idx]
