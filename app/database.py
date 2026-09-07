@@ -31,7 +31,12 @@ class Database:
             self.connection.close()
     
     def execute_query(self, query, params=None):
+        cursor = None
         try:
+            if not self.connection or not self.connection.is_connected():
+                if not self.connect():
+                    print("Error: MySQL connection could not be established.")
+                    return None
             cursor = self.connection.cursor(dictionary=True)
             if params:
                 cursor.execute(query, params)
@@ -49,7 +54,10 @@ class Database:
             return None
         finally:
             if cursor:
-                cursor.close()
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
     
     def get_student_count(self):
         query = "SELECT COUNT(*) as count FROM students"

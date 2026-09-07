@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, Response
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, Response, current_app
 import os
 from werkzeug.utils import secure_filename
 import cv2
@@ -137,7 +137,10 @@ def register_student():
             return redirect(url_for('face_recognition.register_student_form'))
         
         # Create upload directory
-        upload_dir = f'uploads/faces/{student_id}'
+        faces_base = current_app.config.get('FACES_FOLDER')
+        if not faces_base:
+            faces_base = os.path.abspath(os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'faces'))
+        upload_dir = os.path.join(faces_base, str(student_id))
         os.makedirs(upload_dir, exist_ok=True)
         
         # Handle multiple file uploads
@@ -423,7 +426,10 @@ def register_face():
             })
         
         # Create upload directory
-        upload_dir = f'uploads/faces/{student_id}'
+        faces_base = current_app.config.get('FACES_FOLDER')
+        if not faces_base:
+            faces_base = os.path.abspath(os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'faces'))
+        upload_dir = os.path.join(faces_base, str(student_id))
         os.makedirs(upload_dir, exist_ok=True)
         
         # Handle multiple file uploads

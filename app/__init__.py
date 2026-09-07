@@ -27,6 +27,13 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     
+    # Configure base paths reliably regardless of launch directory
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    app.config['BASE_DIR'] = base_dir
+    app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'uploads')
+    app.config['FACES_FOLDER'] = os.path.join(base_dir, 'uploads', 'faces')
+    os.makedirs(app.config['FACES_FOLDER'], exist_ok=True)
+    
     # Register custom filters
     app.jinja_env.filters['format_time'] = format_time
     

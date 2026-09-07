@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, Response
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, Response, current_app
 from app.database import Database
 import bcrypt
 import cv2
@@ -272,7 +272,7 @@ def hapus_mahasiswa(student_id):
             flash('Data mahasiswa tidak ditemukan!', 'error')
             return redirect(url_for('main.mahasiswa'))
             
-        nim = student.get('student_id')
+        nim = str(student.get('student_id', '')).strip()
         profile_photo = student.get('profile_photo')
         
         success = db.delete_student(student_id)
@@ -281,22 +281,79 @@ def hapus_mahasiswa(student_id):
         if success:
             import os
             import shutil
+            import stat
+            import gc
             
-            # 1. Delete profile photo
-            if profile_photo and os.path.exists(profile_photo):
-                try:
-                    os.remove(profile_photo)
-                except Exception as e:
-                    print(f"Error removing profile photo: {e}")
+            # Release any latent file handles on Windows
+            gc.collect()
             
-            # 2. Delete face images folder
+            base_dir = current_app.config.get('BASE_DIR', os.path.abspath(os.path.join(current_app.root_path, '..')))
+            
+            # 1. Delete profile photo if exists (check multiple possible paths)
+            if profile_photo:
+                photo_candidates = [
+                    profile_photo,
+                    os.path.join(base_dir, profile_photo),
+                    os.path.join(base_dir, 'uploads', profile_photo),
+                    os.path.join(os.getcwd(), profile_photo)
+                ]
+                for p in photo_candidates:
+                    if os.path.exists(p) and os.path.isfile(p):
+                        try:
+                            os.chmod(p, stat.S_IWRITE)
+                            os.remove(p)
+                        except Exception as e:
+                            print(f"[Warning] Error removing profile photo {p}: {e}")
+            
+            # 2. Delete face images folder (resolve canonical paths across base_dir and CWD)
             if nim:
-                faces_dir = os.path.join('uploads', 'faces', str(nim))
-                if os.path.exists(faces_dir):
+                def _handle_remove_readonly(func, path, exc_info):
                     try:
-                        shutil.rmtree(faces_dir)
-                    except Exception as e:
-                        print(f"Error removing face directory: {e}")
+                        os.chmod(path, stat.S_IWRITE)
+                        func(path)
+                    except Exception:
+                        pass
+
+                potential_dirs = [
+                    os.path.join(base_dir, 'uploads', 'faces', nim),
+                    os.path.join(base_dir, 'uploads', nim),
+                    os.path.join(os.getcwd(), 'uploads', 'faces', nim),
+                    os.path.join(os.getcwd(), 'uploads', nim),
+                    os.path.join(os.getcwd(), 'DEAD', 'uploads', 'faces', nim),
+                    os.path.join(os.getcwd(), 'DEAD', 'uploads', nim),
+                ]
+                
+                unique_dirs = []
+                for d in potential_dirs:
+                    norm = os.path.abspath(d)
+                    if norm not in unique_dirs:
+                        unique_dirs.append(norm)
+
+                for target_dir in unique_dirs:
+                    if os.path.exists(target_dir) and os.path.isdir(target_dir):
+                        try:
+                            shutil.rmtree(target_dir, onerror=_handle_remove_readonly)
+                            print(f"[Success] Removed student directory: {target_dir}")
+                        except Exception as e:
+                            print(f"[Warning] rmtree failed for {target_dir}: {e}. Retrying file-by-file...")
+                            try:
+                                for root_f, dirs_f, files_f in os.walk(target_dir, topdown=False):
+                                    for f in files_f:
+                                        fp = os.path.join(root_f, f)
+                                        try:
+                                            os.chmod(fp, stat.S_IWRITE)
+                                            os.remove(fp)
+                                        except Exception:
+                                            pass
+                                    for sf in dirs_f:
+                                        try:
+                                            os.rmdir(os.path.join(root_f, sf))
+                                        except Exception:
+                                            pass
+                                os.rmdir(target_dir)
+                                print(f"[Success] Removed student directory via fallback: {target_dir}")
+                            except Exception as e2:
+                                print(f"[Error] Failed to remove directory {target_dir}: {e2}")
                         
                 # 3. Remove from ArcFace embeddings
                 try:
@@ -306,8 +363,41 @@ def hapus_mahasiswa(student_id):
                         fr_system.remove_student(str(nim))
                 except Exception as e:
                     print(f"Error removing from face recognition system: {e}")
+
+                # 4. Remove from legacy face_encodings.pkl and face_encodings_enhanced.pkl if present
+                for enc_filename in ['face_encodings.pkl', 'face_encodings_enhanced.pkl']:
+                    for p_model in [
+                        os.path.join(base_dir, 'models', enc_filename),
+                        os.path.join(os.getcwd(), 'models', enc_filename),
+                        os.path.join(os.getcwd(), 'DEAD', 'models', enc_filename),
+                    ]:
+                        if os.path.exists(p_model):
+                            try:
+                                import pickle
+                                with open(p_model, 'rb') as f:
+                                    enc_data = pickle.load(f)
+                                if isinstance(enc_data, dict) and 'names' in enc_data and 'encodings' in enc_data:
+                                    names = enc_data['names']
+                                    encs = enc_data['encodings']
+                                    filtered_names = []
+                                    filtered_encs = []
+                                    changed = False
+                                    for n, enc in zip(names, encs):
+                                        if n.endswith(f'_{nim}') or n == str(nim):
+                                            changed = True
+                                        else:
+                                            filtered_names.append(n)
+                                            filtered_encs.append(enc)
+                                    if changed:
+                                        enc_data['names'] = filtered_names
+                                        enc_data['encodings'] = filtered_encs
+                                        with open(p_model, 'wb') as f:
+                                            pickle.dump(enc_data, f)
+                                        print(f"[Success] Removed {nim} from {p_model}")
+                            except Exception as e:
+                                print(f"Error cleaning legacy model {p_model}: {e}")
                     
-            flash('Mahasiswa beserta data fotonya berhasil dihapus!', 'success')
+            flash('Mahasiswa beserta seluruh data dan foto wajahnya berhasil dihapus!', 'success')
         else:
             flash('Gagal menghapus mahasiswa!', 'error')
             

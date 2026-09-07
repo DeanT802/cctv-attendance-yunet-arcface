@@ -43,3 +43,9 @@ datasets/
 # OS
 .DS_Store
 Thumbs.db
+
+#
+script/
+tools/
+/requirements-dev.txt
+/requirements-minimal.txt
