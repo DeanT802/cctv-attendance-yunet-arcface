@@ -1,24 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Sistem Presensi Mahasiswa{% endblock %}
+{% block title %}Masuk - Sistem Presensi Mahasiswa{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row min-vh-100">
-        <div class="col-lg-6 d-flex align-items-center justify-content-center">
-            <div class="card shadow-lg border-0" style="width: 100%; max-width: 400px;">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-person-check-fill text-primary" style="font-size: 3rem;"></i>
-                        <h2 class="mt-3 mb-2">Sistem Presensi</h2>
-                        <p class="text-muted">Masuk ke dashboard presensi mahasiswa</p>
+<div class="container-fluid p-0">
+    <div class="row g-0 min-vh-100">
+        <!-- Form Section -->
+        <div class="col-lg-6 d-flex align-items-center justify-content-center p-4 p-md-5" style="background-color: var(--color-bg-warm);">
+            <div class="card border border-sand shadow-sm w-100" style="max-width: 440px; border-radius: 18px;">
+                <div class="card-body p-4 p-md-5">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3 rounded-circle" style="width: 54px; height: 54px; background-color: var(--color-plum-light); color: var(--color-plum);">
+                            <i class="bi bi-person-check-fill fs-3"></i>
+                        </div>
+                        <h2 class="h3 fw-bold mb-1" style="font-family: var(--font-heading); color: var(--color-plum-dark);">Selamat Datang</h2>
+                        <p class="text-muted small mb-0">Silakan masukkan akun Anda untuk mengakses sistem presensi</p>
                     </div>
 
                     {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                     {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show"
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show py-2 px-3 small"
                         role="alert">
+                        <i class="bi {{ 'bi-exclamation-circle' if category == 'error' else 'bi-check-circle' }} me-2"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -26,57 +30,81 @@
                     {% endif %}
                     {% endwith %}
 
-                    <form method="POST">
+                    <form method="POST" class="mt-3">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                <input type="text" class="form-control" id="username" name="username" required>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Masukkan username" required autofocus>
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label for="password" class="form-label">Password</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="password" class="form-label mb-0">Password</label>
+                            </div>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                <input type="password" class="form-control" id="password" name="password" required>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Masukkan password" required>
                             </div>
                         </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>Masuk
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg fs-6 py-2 fw-semibold">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Masuk ke Sistem
                             </button>
                         </div>
                     </form>
 
-                    <!-- <div class="mt-4 text-center">
-                        <small class="text-muted">
-                            Demo: username = <strong>admin</strong>, password = <strong>password</strong>
+                    <div class="pt-3 border-top text-center">
+                        <small class="text-muted" style="font-size: 0.8rem;">
+                            Sistem Presensi Mahasiswa &bull; Berbasis AI Face Recognition
                         </small>
-                    </div> -->
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-6 d-none d-lg-block" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            <div class="d-flex align-items-center justify-content-center h-100 text-white text-center">
-                <div>
-                    <i class="bi bi-graph-up-arrow" style="font-size: 5rem; opacity: 0.8;"></i>
-                    <h1 class="mt-4 mb-3">Dashboard Presensi</h1>
-                    <p class="lead">Kelola presensi mahasiswa dengan mudah dan efisien</p>
-                    <div class="row mt-5">
-                        <div class="col-4">
-                            <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
-                            <p class="mt-2 mb-0">Mahasiswa</p>
+        <!-- Showcase Hero Section -->
+        <div class="col-lg-6 d-none d-lg-flex align-items-center justify-content-center p-5 position-relative overflow-hidden" 
+             style="background: linear-gradient(150deg, #4A3F50 0%, #382F3D 100%);">
+            <!-- Decorative Subtle Ambient Glow -->
+            <div class="position-absolute" style="top: -20%; right: -15%; width: 480px; height: 480px; background: radial-gradient(circle, rgba(208, 184, 168, 0.15) 0%, rgba(208, 184, 168, 0) 70%); border-radius: 50%;"></div>
+            <div class="position-absolute" style="bottom: -15%; left: -10%; width: 420px; height: 420px; background: radial-gradient(circle, rgba(125, 110, 131, 0.25) 0%, rgba(125, 110, 131, 0) 70%); border-radius: 50%;"></div>
+            
+            <div class="text-white text-center position-relative" style="max-width: 520px; z-index: 2;">
+                <span class="badge px-3 py-2 mb-4 text-uppercase fw-semibold" 
+                      style="background: rgba(248, 237, 227, 0.12); color: #F8EDE3; border: 1px solid rgba(223, 211, 195, 0.25); letter-spacing: 0.08em; font-size: 0.75rem;">
+                    Platform Presensi Modern
+                </span>
+                
+                <h1 class="display-5 fw-bold mb-3" style="font-family: var(--font-heading); color: #F8EDE3; line-height: 1.2;">
+                    Kehadiran Lebih Cerdas, Cepat & Akurat
+                </h1>
+                <p class="lead mb-5" style="color: rgba(248, 237, 227, 0.82); font-size: 1.05rem; font-weight: 400;">
+                    Integrasi teknologi Face Recognition mutakhir untuk pencatatan presensi yang andal, transparan, dan efisien.
+                </p>
+
+                <div class="row g-3 text-start">
+                    <div class="col-4">
+                        <div class="p-3 rounded-3 h-100" style="background: rgba(248, 237, 227, 0.07); border: 1px solid rgba(223, 211, 195, 0.14);">
+                            <i class="bi bi-camera-video fs-3 mb-2 d-block" style="color: #DFD3C3;"></i>
+                            <h6 class="mb-1 fw-semibold text-white" style="font-size: 0.88rem;">Face AI</h6>
+                            <p class="mb-0 small" style="color: rgba(248, 237, 227, 0.65); font-size: 0.75rem;">Deteksi wajah real-time</p>
                         </div>
-                        <div class="col-4">
-                            <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
-                            <p class="mt-2 mb-0">Jadwal</p>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 rounded-3 h-100" style="background: rgba(248, 237, 227, 0.07); border: 1px solid rgba(223, 211, 195, 0.14);">
+                            <i class="bi bi-shield-check fs-3 mb-2 d-block" style="color: #DFD3C3;"></i>
+                            <h6 class="mb-1 fw-semibold text-white" style="font-size: 0.88rem;">Anti-Spoof</h6>
+                            <p class="mb-0 small" style="color: rgba(248, 237, 227, 0.65); font-size: 0.75rem;">Proteksi keaslian data</p>
                         </div>
-                        <div class="col-4">
-                            <i class="bi bi-bar-chart-fill" style="font-size: 2rem;"></i>
-                            <p class="mt-2 mb-0">Statistik</p>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 rounded-3 h-100" style="background: rgba(248, 237, 227, 0.07); border: 1px solid rgba(223, 211, 195, 0.14);">
+                            <i class="bi bi-graph-up-arrow fs-3 mb-2 d-block" style="color: #DFD3C3;"></i>
+                            <h6 class="mb-1 fw-semibold text-white" style="font-size: 0.88rem;">Analitik</h6>
+                            <p class="mb-0 small" style="color: rgba(248, 237, 227, 0.65); font-size: 0.75rem;">Laporan & statistik</p>
                         </div>
                     </div>
                 </div>

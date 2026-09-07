@@ -2,6 +2,59 @@
 
 {% block title %}Ambil Presensi - {{ schedule.course_name }}{% endblock %}
 
+{% block styles %}
+<style>
+    .detection-status {
+        padding: 0.9rem 1.1rem;
+        border-radius: 12px;
+        margin-bottom: 0.85rem;
+        text-align: center;
+        font-weight: 500;
+        font-size: 0.92rem;
+        transition: all 0.25s ease;
+        line-height: 1.5;
+    }
+
+    .detection-inactive {
+        background: rgba(114, 103, 101, 0.08);
+        color: var(--color-text-muted, #726765);
+        border: 1.5px solid rgba(223, 211, 195, 0.8);
+    }
+
+    .detection-active {
+        background: rgba(125, 110, 131, 0.1);
+        color: var(--color-plum-dark, #4A3F50);
+        border: 1.5px solid rgba(125, 110, 131, 0.35);
+    }
+
+    .detection-success {
+        background: var(--color-success-light, #EBF2EE);
+        color: var(--color-success, #355648);
+        border: 1.5px solid rgba(78, 122, 104, 0.35);
+    }
+
+    .detection-warning {
+        background: var(--color-warning-light, #FBF3EC);
+        color: var(--color-warning, #8C5123);
+        border: 1.5px solid rgba(194, 123, 66, 0.35);
+    }
+
+    .detection-error {
+        background: var(--color-danger-light, #FCEEEE);
+        color: var(--color-danger, #7A2F2F);
+        border: 1.5px solid rgba(168, 71, 71, 0.35);
+    }
+
+    .result-student-card {
+        border-radius: 12px;
+        border: 1px solid var(--color-border, #DFD3C3);
+        background: #FFFFFF;
+        box-shadow: 0 4px 12px rgba(125, 110, 131, 0.08);
+        transition: transform 0.2s ease;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -480,22 +533,45 @@
                         
                         <!-- Recognition Status Column -->
                         <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-header bg-success text-white">
-                                    <i class="bi bi-check-circle-fill me-2"></i>Status Deteksi
+                            <div class="card shadow-sm border">
+                                <div class="card-header d-flex align-items-center justify-content-between py-3">
+                                    <h6 class="mb-0 fw-bold" style="font-family: var(--font-heading);">
+                                        <i class="bi bi-person-bounding-box me-2 text-primary"></i>Status Deteksi
+                                    </h6>
+                                    <span id="detectionModeBadge" class="badge bg-secondary">Standby</span>
                                 </div>
-                                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                                    <div id="detectionStatus">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
-                                            <p class="mt-3">Menunggu deteksi wajah...</p>
+                                <div class="card-body" style="max-height: 520px; overflow-y: auto;">
+                                    <!-- Dynamic Detection Status Banner -->
+                                    <div id="detectionStatus" class="detection-status detection-inactive">
+                                        <i class="bi bi-camera-video-off me-2"></i>Kamera belum aktif
+                                    </div>
+                                    
+                                    <!-- Processing Indicator -->
+                                    <div id="processingIndicator" class="mb-3 text-center" style="display: none;">
+                                        <div class="p-2 rounded bg-light border d-inline-block w-100">
+                                            <small class="text-muted d-flex align-items-center justify-content-center">
+                                                <span class="spinner-border spinner-border-sm me-2 text-primary" role="status"></span>
+                                                <span>AI sedang memproses pengenalan wajah...</span>
+                                                <span id="processingTimer" class="badge bg-info ms-2">0s</span>
+                                            </small>
                                         </div>
                                     </div>
                                     
-                                    <!-- Recent Detections -->
+                                    <!-- Current / Latest Recognition Result -->
+                                    <div id="recognitionResult" style="display: none;" class="mb-3">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0 small fw-bold text-muted text-uppercase" style="font-size: 11px; letter-spacing: 0.05em;">
+                                                <i class="bi bi-person-check-fill me-1 text-success"></i>Hasil Recognition Terkini
+                                            </h6>
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 10px;">Live Update</span>
+                                        </div>
+                                        <div id="resultContent"></div>
+                                    </div>
+                                    
+                                    <!-- Recent Detections List -->
                                     <div id="recentDetections" style="display: none;">
-                                        <h6 class="mb-3">
-                                            <i class="bi bi-clock-history me-2"></i>Terdeteksi Baru-baru Ini
+                                        <h6 class="mb-2 small fw-bold text-muted text-uppercase border-top pt-3" style="font-size: 11px; letter-spacing: 0.05em;">
+                                            <i class="bi bi-clock-history me-1"></i>Terdeteksi Baru-baru Ini
                                         </h6>
                                         <div id="detectionList"></div>
                                     </div>
@@ -1220,13 +1296,7 @@ function finishStartIPCamera(rtspUrl) {
     window.activeRtspUrl = rtspUrl;
     streamActive = true;
     
-    document.getElementById('detectionStatus').innerHTML = `
-        <div class="alert alert-success mb-0">
-            <i class="bi bi-camera-video-fill me-2"></i>
-            <strong>Kamera Aktif!</strong><br>
-            <small>Sistem siap mendeteksi wajah mahasiswa</small>
-        </div>
-    `;
+    updateDetectionStatus('IP Camera aktif - Memulai deteksi real-time...', 'active');
     
     startAutomaticRecognition();
     showToast('Kamera CCTV berhasil diaktifkan');
@@ -1268,12 +1338,8 @@ function stopIPCameraStream() {
     statusBadge.className = 'badge bg-secondary';
     fpsCounter.style.display = 'none';
     
-    document.getElementById('detectionStatus').innerHTML = `
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
-            <p class="mt-3">Menunggu deteksi wajah...</p>
-        </div>
-    `;
+    stopProcessingTimer();
+    updateDetectionStatus('Kamera belum aktif', 'inactive');
     
     showToast('Kamera CCTV dihentikan');
 }
@@ -1385,13 +1451,7 @@ async function startWebcam() {
         streamActive = true;
         
         // Update detection status
-        document.getElementById('detectionStatus').innerHTML = `
-            <div class="alert alert-success mb-0">
-                <i class="bi bi-webcam-fill me-2"></i>
-                <strong>Webcam Aktif!</strong><br>
-                <small>Sistem siap mendeteksi wajah mahasiswa</small>
-            </div>
-        `;
+        updateDetectionStatus('Webcam aktif - Memulai deteksi real-time...', 'active');
         
         // Start automatic recognition
         startAutomaticRecognition();
@@ -1408,14 +1468,7 @@ async function startWebcam() {
             errorMessage = 'Webcam tidak ditemukan. Pastikan kamera terhubung.';
         }
         
-        document.getElementById('detectionStatus').innerHTML = `
-            <div class="alert alert-danger mb-0">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>Error!</strong><br>
-                <small>${errorMessage}</small>
-            </div>
-        `;
-        
+        updateDetectionStatus(errorMessage, 'error');
         showToast(errorMessage);
     }
 }
@@ -1461,14 +1514,189 @@ function stopWebcam() {
     statusBadge.className = 'badge bg-secondary';
     fpsCounter.style.display = 'none';
     
-    document.getElementById('detectionStatus').innerHTML = `
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
-            <p class="mt-3">Menunggu deteksi wajah...</p>
-        </div>
-    `;
+    stopProcessingTimer();
+    updateDetectionStatus('Kamera belum aktif', 'inactive');
     
     showToast('Webcam dihentikan');
+}
+
+// ==========================================
+// STATUS DETEKSI & RECOGNITION DISPLAY (CLAUDE UI)
+// ==========================================
+let processingTimerInterval = null;
+let processingSeconds = 0;
+
+function startProcessingTimer() {
+    processingSeconds = 0;
+    const timerEl = document.getElementById('processingTimer');
+    const indicatorEl = document.getElementById('processingIndicator');
+    if (timerEl) timerEl.textContent = '0s';
+    if (indicatorEl) indicatorEl.style.display = 'block';
+    
+    if (processingTimerInterval) clearInterval(processingTimerInterval);
+    processingTimerInterval = setInterval(() => {
+        processingSeconds++;
+        if (timerEl) timerEl.textContent = `${processingSeconds}s`;
+    }, 1000);
+}
+
+function stopProcessingTimer() {
+    if (processingTimerInterval) {
+        clearInterval(processingTimerInterval);
+        processingTimerInterval = null;
+    }
+    const indicatorEl = document.getElementById('processingIndicator');
+    if (indicatorEl) indicatorEl.style.display = 'none';
+}
+
+function updateDetectionStatus(message, type, faceCount = null) {
+    const statusEl = document.getElementById('detectionStatus');
+    const modeBadge = document.getElementById('detectionModeBadge');
+    if (!statusEl) return;
+    
+    statusEl.className = 'detection-status';
+    let icon = '';
+    
+    switch(type) {
+        case 'success':
+            icon = 'bi bi-check-circle-fill';
+            statusEl.classList.add('detection-success');
+            if (modeBadge) {
+                modeBadge.className = 'badge bg-success';
+                modeBadge.textContent = 'Terdeteksi';
+            }
+            break;
+        case 'warning':
+            icon = 'bi bi-exclamation-triangle-fill';
+            statusEl.classList.add('detection-warning');
+            if (modeBadge) {
+                modeBadge.className = 'badge bg-warning text-dark';
+                modeBadge.textContent = 'Perhatian';
+            }
+            break;
+        case 'error':
+            icon = 'bi bi-x-circle-fill';
+            statusEl.classList.add('detection-error');
+            if (modeBadge) {
+                modeBadge.className = 'badge bg-danger';
+                modeBadge.textContent = 'Error';
+            }
+            break;
+        case 'active':
+            icon = 'spinner-border spinner-border-sm';
+            statusEl.classList.add('detection-active');
+            if (modeBadge) {
+                modeBadge.className = 'badge bg-primary';
+                modeBadge.textContent = 'Mendeteksi';
+            }
+            break;
+        default:
+            icon = 'bi bi-camera-video-off';
+            statusEl.classList.add('detection-inactive');
+            if (modeBadge) {
+                modeBadge.className = 'badge bg-secondary';
+                modeBadge.textContent = 'Standby';
+            }
+    }
+    
+    let faceBadge = '';
+    if (faceCount && faceCount > 1) {
+        faceBadge = ` <span class="badge bg-primary ms-1">${faceCount} Wajah</span>`;
+    }
+    
+    if (type === 'active') {
+        statusEl.innerHTML = `<span class="${icon} me-2" role="status"></span><span>${message}</span>${faceBadge}`;
+    } else {
+        statusEl.innerHTML = `<i class="${icon} me-2"></i><span>${message}</span>${faceBadge}`;
+    }
+    
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[Status Update ${timestamp}] ${type.toUpperCase()}: ${message}`);
+}
+
+function showRecognitionResult(result) {
+    const resultDiv = document.getElementById('recognitionResult');
+    const contentDiv = document.getElementById('resultContent');
+    if (!resultDiv || !contentDiv) return;
+    
+    if (result.success && result.student) {
+        const allFaces = result.all_faces || result.all_students || [];
+        if (result.multiple_faces && allFaces.length > 1) {
+            // MULTIPLE FACES
+            const facesCount = allFaces.length;
+            let facesHTML = `
+                <div class="alert alert-success mb-2 p-2 small">
+                    <strong><i class="bi bi-people-fill me-1"></i> ${facesCount} Wajah Terdeteksi</strong>
+                    <div class="small">Semua berhasil diidentifikasi dan diabsen</div>
+                </div>
+                <div class="row g-2">
+            `;
+            
+            allFaces.forEach((student, index) => {
+                const confPercent = (student.confidence * 100).toFixed(1);
+                const confClass = student.confidence > 0.70 ? 'success' : (student.confidence > 0.55 ? 'info' : 'warning');
+                facesHTML += `
+                    <div class="col-6">
+                        <div class="p-2 rounded border bg-light h-100" style="font-size: 11px;">
+                            <strong class="d-block text-truncate">${student.nama || student.name}</strong>
+                            <div class="text-muted mb-1">${student.student_id}</div>
+                            <span class="badge bg-${confClass}">${confPercent}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+            facesHTML += `</div>`;
+            contentDiv.innerHTML = facesHTML;
+        } else {
+            // SINGLE FACE
+            const student = result.student;
+            const nim = student.nim || student.student_id || '';
+            const nama = student.nama || student.name || 'Mahasiswa Terdaftar';
+            const className = student.class_name || '{{ schedule.class_name }}';
+            const confVal = result.confidence || 0.8;
+            const confPct = (confVal * 100).toFixed(1);
+            const timeStr = result.timestamp || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            contentDiv.innerHTML = `
+                <div class="result-student-card p-3 border-start border-4 border-success">
+                    <div class="d-flex align-items-center">
+                        <div class="position-relative me-3 flex-shrink-0">
+                            <img src="/api/student_photo/${nim}" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 2px solid #4E7A68;" />
+                            <div class="rounded-circle bg-success text-white align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; display: none; font-size: 20px;">
+                                <i class="bi bi-person-check-fill"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <h6 class="mb-0 text-success fw-bold text-truncate" style="font-size: 14px;">${nama}</h6>
+                                <span class="badge bg-success py-1" style="font-size: 9px;"><i class="bi bi-check-lg me-1"></i>Hadir</span>
+                            </div>
+                            <div class="text-muted small mb-1" style="font-size: 12px;">
+                                <span class="me-2"><strong>NIM:</strong> <code>${nim}</code></span>
+                                <span><strong>Kelas:</strong> ${className}</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 align-items-center" style="font-size: 10px;">
+                                <span class="badge bg-primary">Confidence: ${confPct}%</span>
+                                <span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>${timeStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+    } else if (!result.success && result.message) {
+        contentDiv.innerHTML = `
+            <div class="alert alert-warning py-2 px-3 mb-0 small">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                <span>${result.message}</span>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    }
 }
 
 // Start automatic recognition
@@ -1531,6 +1759,9 @@ async function captureAndRecognize() {
             };
         }
         
+        startProcessingTimer();
+        updateDetectionStatus('🔍 Memproses pengenalan wajah...', 'active');
+        
         // Call capture endpoint
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -1548,10 +1779,16 @@ async function captureAndRecognize() {
             pollRecognitionResult(data.job_id);
         } else {
             console.log('[Recognition] No job started:', data.message);
+            stopProcessingTimer();
+            if (data.message) {
+                updateDetectionStatus(data.message, 'warning');
+            }
         }
         
     } catch (error) {
         console.error('[Recognition] Error:', error);
+        stopProcessingTimer();
+        updateDetectionStatus('Gagal mengambil frame: ' + error.message, 'error');
     }
 }
 
@@ -1571,21 +1808,46 @@ async function pollRecognitionResult(jobId) {
             
             if (data.status === 'completed') {
                 clearInterval(pollInterval);
+                stopProcessingTimer();
                 
                 if (data.success) {
                     console.log('[Poll] Recognition SUCCESS:', data);
+                    
+                    const faceCount = data.faces_detected || (data.all_faces ? data.all_faces.length : 1);
+                    if (data.multiple_faces && data.all_faces && data.all_faces.length > 1) {
+                        updateDetectionStatus(`✅ ${faceCount} wajah berhasil diidentifikasi dan diabsen`, 'success', faceCount);
+                    } else if (data.student) {
+                        const sName = data.student.name || data.student.nama || 'Mahasiswa';
+                        const confPct = ((data.confidence || 0.8) * 100).toFixed(1);
+                        updateDetectionStatus(`✅ Presensi berhasil: ${sName} (${confPct}%)`, 'success');
+                    } else {
+                        updateDetectionStatus('✅ Presensi berhasil diverifikasi!', 'success');
+                    }
+                    
+                    showRecognitionResult(data);
                     handleRecognitionSuccess(data);
                 } else {
                     console.log('[Poll] Recognition FAILED:', data.message);
+                    const failMsg = data.message || 'Wajah tidak cocok dengan mahasiswa terdaftar';
+                    updateDetectionStatus(failMsg, 'warning');
+                    showRecognitionResult(data);
+                }
+            } else if (data.status === 'processing') {
+                if (attempts === 1) {
+                    updateDetectionStatus('🔍 Memproses wajah di background...', 'active');
                 }
             } else if (attempts >= maxAttempts) {
                 clearInterval(pollInterval);
+                stopProcessingTimer();
                 console.log('[Poll] Timeout after', maxAttempts, 'attempts');
+                updateDetectionStatus('Timeout: Proses pengenalan wajah terlalu lama', 'warning');
             }
             
         } catch (error) {
             console.error('[Poll] Error:', error);
             clearInterval(pollInterval);
+            stopProcessingTimer();
+            updateDetectionStatus('Error: ' + error.message, 'error');
         }
         
     }, 1000);
@@ -1640,6 +1902,7 @@ function markStudentPresent(studentId, studentName, confidence) {
     // Check if already detected
     if (detectedStudents.has(studentId)) {
         console.log('[Attendance] ⚠️ Student already detected:', studentId);
+        updateDetectionStatus(`ℹ️ ${studentName} (${studentId}) sudah tercatat hadir`, 'success');
         return;
     }
     
@@ -1736,6 +1999,7 @@ function markStudentPresent(studentId, studentName, confidence) {
         
         // Show warning notification - student recognized but not in this schedule
         showToast('Peringatan', `${studentName} (${studentId}) terdeteksi tapi tidak terdaftar di jadwal ini!`, 'warning');
+        updateDetectionStatus(`⚠️ ${studentName} (${studentId}) terdeteksi tapi tidak terdaftar di kelas ini`, 'warning');
         console.warn('[Attendance] ⚠️ Student recognized but not enrolled in this schedule');
     }
 }

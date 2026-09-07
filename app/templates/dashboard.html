@@ -148,8 +148,8 @@
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead class="table-dark">
+                                <table class="table table-striped table-hover">
+                                    <thead>
                                         <tr>
                                             <th>Kelas</th>
                                             <th>Total Mahasiswa</th>
@@ -237,23 +237,23 @@ fetch('/api/attendance-chart')
                     label: 'Persentase Kehadiran (%)',
                     data: data.data,
                     backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(118, 75, 162, 0.8)',
-                        'rgba(17, 153, 142, 0.8)',
-                        'rgba(56, 239, 125, 0.8)',
-                        'rgba(240, 147, 251, 0.8)',
-                        'rgba(245, 87, 108, 0.8)'
+                        'rgba(125, 110, 131, 0.85)',
+                        'rgba(208, 184, 168, 0.85)',
+                        'rgba(78, 122, 104, 0.85)',
+                        'rgba(194, 123, 66, 0.85)',
+                        'rgba(92, 124, 138, 0.85)',
+                        'rgba(168, 71, 71, 0.85)'
                     ],
                     borderColor: [
-                        'rgba(102, 126, 234, 1)',
-                        'rgba(118, 75, 162, 1)',
-                        'rgba(17, 153, 142, 1)',
-                        'rgba(56, 239, 125, 1)',
-                        'rgba(240, 147, 251, 1)',
-                        'rgba(245, 87, 108, 1)'
+                        '#7D6E83',
+                        '#D0B8A8',
+                        '#4E7A68',
+                        '#C27B42',
+                        '#5C7C8A',
+                        '#A84747'
                     ],
                     borderWidth: 2,
-                    borderRadius: 4
+                    borderRadius: 6
                 }]
             },
             options: {
