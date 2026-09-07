@@ -2010,10 +2010,318 @@ def api_student_photo(student_id):
     """Get sample photo for registered student"""
     from flask import send_from_directory, current_app, abort
     faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
-    student_dir = os.path.join(faces_dir, student_id)
+    student_dir = os.path.join(faces_dir, str(student_id))
     if os.path.exists(student_dir):
         files = [f for f in os.listdir(student_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         if files:
             return send_from_directory(student_dir, files[0])
     abort(404)
+
+
+@main.route('/api/mahasiswa/<int:student_id>', methods=['GET'])
+def api_get_mahasiswa(student_id):
+    """Get student details and face photos for editing (Admin only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        student = db.get_student_by_id(student_id)
+        db.disconnect()
+        if not student:
+            return jsonify({'success': False, 'message': 'Mahasiswa tidak ditemukan'}), 404
+        
+        nim = str(student.get('student_id', '')).strip()
+        faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
+        student_dir = os.path.join(faces_dir, nim)
+        
+        photos = []
+        if os.path.exists(student_dir):
+            files = [f for f in os.listdir(student_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+            for f in sorted(files):
+                photos.append({
+                    'filename': f,
+                    'url': url_for('main.uploaded_file', filename=f"faces/{nim}/{f}")
+                })
+        
+        # Serialize datetime fields for JSON response
+        student_data = dict(student)
+        for k, v in list(student_data.items()):
+            if hasattr(v, 'isoformat'):
+                student_data[k] = v.isoformat()
+        
+        return jsonify({
+            'success': True,
+            'student': student_data,
+            'photos': photos,
+            'photo_count': len(photos)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main.route('/mahasiswa/edit/<int:student_id>', methods=['POST'])
+def edit_mahasiswa(student_id):
+    """Update student information with ArcFace embedding auto-sync (Admin only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({'success': False, 'message': 'Gagal terhubung ke database'}), 500
+    
+    try:
+        current_student = db.get_student_by_id(student_id)
+        if not current_student:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Mahasiswa tidak ditemukan'}), 404
+        
+        old_nim = str(current_student.get('student_id', '')).strip()
+        old_name = current_student.get('name', '')
+        
+        data = request.form if request.form else (request.get_json() or {})
+        new_nim = str(data.get('student_id', old_nim)).strip()
+        new_name = str(data.get('name', old_name)).strip()
+        email = data.get('email')
+        phone = data.get('phone')
+        class_year = data.get('class_year')
+        program_study_id = data.get('program_study_id')
+        department = data.get('department')
+        semester = data.get('semester')
+        class_number = data.get('class_number')
+        class_name = data.get('class_name')
+        
+        # If NIM changed, verify it doesn't conflict with another student
+        if new_nim != old_nim:
+            conflict = db.execute_query("SELECT id FROM students WHERE student_id = %s AND id != %s", (new_nim, student_id))
+            if conflict:
+                db.disconnect()
+                return jsonify({'success': False, 'message': f'NIM {new_nim} sudah digunakan oleh mahasiswa lain!'}), 400
+        
+        # Update database
+        updated = db.update_student(
+            student_id, new_nim, new_name, email, phone, class_year,
+            program_study_id, department, semester, class_number, class_name
+        )
+        
+        if not updated:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Gagal memperbarui data di database'}), 500
+        
+        faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
+        old_dir = os.path.join(faces_dir, old_nim)
+        new_dir = os.path.join(faces_dir, new_nim)
+        
+        # Handle folder rename if NIM changed
+        if new_nim != old_nim and os.path.exists(old_dir):
+            if os.path.exists(new_dir):
+                import shutil
+                for f in os.listdir(old_dir):
+                    shutil.move(os.path.join(old_dir, f), os.path.join(new_dir, f))
+                shutil.rmtree(old_dir, ignore_errors=True)
+            else:
+                os.rename(old_dir, new_dir)
+        
+        # Sync ArcFace embeddings if NIM or name changed
+        sync_message = ""
+        try:
+            from app.face_recognition_routes import get_face_recognition_system
+            fr_system = get_face_recognition_system()
+            if fr_system:
+                # If NIM or name changed, remove old key
+                if new_nim != old_nim or new_name != old_name:
+                    fr_system.remove_student(str(old_nim))
+                
+                # Re-register with current folder if it has >= 3 photos
+                target_dir = new_dir if os.path.exists(new_dir) else old_dir
+                if os.path.exists(target_dir):
+                    files = [f for f in os.listdir(target_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                    if len(files) >= 3:
+                        ok, msg = fr_system.register_new_student(new_nim, new_name, target_dir)
+                        if ok:
+                            sync_message = " Model Face Recognition berhasil disinkronkan."
+        except Exception as fe:
+            print(f"[Warning] Error syncing face recognition on edit: {fe}")
+        
+        db.disconnect()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({
+                'success': True,
+                'message': f'Data mahasiswa {new_name} berhasil diperbarui!{sync_message}'
+            })
+        
+        flash(f'Data mahasiswa {new_name} berhasil diperbarui!{sync_message}', 'success')
+        return redirect(url_for('main.mahasiswa'))
+        
+    except Exception as e:
+        db.disconnect()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main.route('/api/mahasiswa/<int:student_id>/upload_photos', methods=['POST'])
+def api_upload_student_photos(student_id):
+    """Upload new face photos for student and auto-sync ArcFace embeddings"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        student = db.get_student_by_id(student_id)
+        if not student:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Mahasiswa tidak ditemukan'}), 404
+        
+        nim = str(student.get('student_id', '')).strip()
+        name = student.get('name', '')
+        
+        faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
+        student_dir = os.path.join(faces_dir, nim)
+        os.makedirs(student_dir, exist_ok=True)
+        
+        files = request.files.getlist('photos')
+        if not files:
+            files = request.files.getlist('face_images')
+        
+        if not files or all(f.filename == '' for f in files):
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Tidak ada file foto yang dipilih'}), 400
+        
+        from werkzeug.utils import secure_filename
+        import time
+        saved_count = 0
+        for f in files:
+            if f and f.filename:
+                ext = os.path.splitext(f.filename)[1].lower()
+                if ext in ['.jpg', '.jpeg', '.png']:
+                    safe_name = f"photo_{int(time.time()*1000)}_{saved_count}{ext}"
+                    f.save(os.path.join(student_dir, safe_name))
+                    saved_count += 1
+        
+        # Get current list of photos
+        all_photos = [f for f in os.listdir(student_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        
+        # Sync ArcFace
+        fr_synced = False
+        fr_message = ""
+        try:
+            from app.face_recognition_routes import get_face_recognition_system
+            fr_system = get_face_recognition_system()
+            if fr_system:
+                if len(all_photos) >= 3:
+                    ok, msg = fr_system.register_new_student(nim, name, student_dir)
+                    if ok:
+                        fr_synced = True
+                        fr_message = " Model ArcFace berhasil diperbarui dan disinkronkan!"
+                        db.update_student_face_status(student_id, True)
+                else:
+                    fr_message = f" Tersisa {len(all_photos)} foto (minimal butuh 3 foto agar Face Recognition aktif)."
+        except Exception as fe:
+            print(f"[Warning] Error during face sync: {fe}")
+        
+        db.disconnect()
+        
+        photo_list = [{
+            'filename': p,
+            'url': url_for('main.uploaded_file', filename=f"faces/{nim}/{p}")
+        } for p in sorted(all_photos)]
+        
+        return jsonify({
+            'success': True,
+            'message': f'{saved_count} foto berhasil ditambahkan!{fr_message}',
+            'photos': photo_list,
+            'photo_count': len(photo_list),
+            'face_recognition_synced': fr_synced
+        })
+        
+    except Exception as e:
+        db.disconnect()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main.route('/api/mahasiswa/<int:student_id>/delete_photo', methods=['POST'])
+def api_delete_student_photo(student_id):
+    """Delete a specific face photo and re-sync ArcFace embeddings"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        student = db.get_student_by_id(student_id)
+        if not student:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Mahasiswa tidak ditemukan'}), 404
+        
+        nim = str(student.get('student_id', '')).strip()
+        name = student.get('name', '')
+        
+        data = request.get_json() if request.is_json else request.form
+        filename = data.get('filename')
+        if not filename:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'Nama file foto tidak diberikan'}), 400
+        
+        from werkzeug.utils import secure_filename
+        safe_filename = secure_filename(filename)
+        
+        faces_dir = current_app.config.get('FACES_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'faces'))
+        photo_path = os.path.join(faces_dir, nim, safe_filename)
+        
+        if os.path.exists(photo_path) and os.path.isfile(photo_path):
+            os.remove(photo_path)
+        else:
+            db.disconnect()
+            return jsonify({'success': False, 'message': 'File foto tidak ditemukan'}), 404
+        
+        student_dir = os.path.join(faces_dir, nim)
+        remaining_files = [f for f in os.listdir(student_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        
+        fr_status = "synced"
+        fr_message = ""
+        try:
+            from app.face_recognition_routes import get_face_recognition_system
+            fr_system = get_face_recognition_system()
+            if fr_system:
+                if len(remaining_files) >= 3:
+                    ok, msg = fr_system.register_new_student(nim, name, student_dir)
+                    if ok:
+                        fr_status = "synced"
+                        fr_message = " Model ArcFace berhasil diperbarui."
+                        db.update_student_face_status(student_id, True)
+                else:
+                    # Deactivate student in model until they have >= 3 images
+                    fr_system.remove_student(str(nim))
+                    db.update_student_face_status(student_id, False)
+                    fr_status = "insufficient"
+                    fr_message = f" Peringatan: Tersisa {len(remaining_files)} foto. Model Face Recognition dinonaktifkan sementara untuk mahasiswa ini sampai foto diunggah minimal 3 foto."
+        except Exception as fe:
+            print(f"[Warning] Error re-syncing face after deletion: {fe}")
+        
+        db.disconnect()
+        
+        photo_list = [{
+            'filename': p,
+            'url': url_for('main.uploaded_file', filename=f"faces/{nim}/{p}")
+        } for p in sorted(remaining_files)]
+        
+        return jsonify({
+            'success': True,
+            'message': f'Foto {safe_filename} berhasil dihapus!{fr_message}',
+            'photos': photo_list,
+            'photo_count': len(photo_list),
+            'status': fr_status
+        })
+        
+    except Exception as e:
+        db.disconnect()
+        return jsonify({'success': False, 'message': str(e)}), 500
 

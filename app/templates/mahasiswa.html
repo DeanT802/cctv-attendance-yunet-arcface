@@ -179,7 +179,13 @@
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                        title="Edit Data & Kelola Foto Wajah"
+                                                        onclick="openEditModal({{ student.id }})">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        title="Hapus Mahasiswa"
                                                         onclick="confirmDelete({{ student.id }}, '{{ student.name }}')">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -228,13 +234,241 @@
             </div>
             <div class="modal-body">
                 <p>Anda yakin ingin menghapus mahasiswa <strong id="studentName"></strong>?</p>
-                <p class="text-danger"><small>Data yang dihapus tidak dapat dikembalikan.</small></p>
+                <p class="text-danger"><small>Data dan seluruh foto wajah di dataset akan dihapus dari sistem.</small></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                 <a href="#" id="deleteLink" class="btn btn-danger">
                     <i class="bi bi-trash me-2"></i>Hapus
                 </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Student & Face Photo Management Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editStudentModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Data Mahasiswa & Kelola Foto Wajah
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading State -->
+                <div id="editModalLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Memuat data...</span>
+                    </div>
+                    <p class="text-muted mt-2">Mengambil data mahasiswa & foto wajah...</p>
+                </div>
+
+                <!-- Main Content (hidden while loading) -->
+                <div id="editModalContent" style="display: none;">
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-3" id="editStudentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold" id="tab-data-btn" data-bs-toggle="tab" data-bs-target="#tab-data-content" type="button" role="tab">
+                                <i class="bi bi-person-vcard me-2"></i>1. Data Mahasiswa
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="tab-photos-btn" data-bs-toggle="tab" data-bs-target="#tab-photos-content" type="button" role="tab">
+                                <i class="bi bi-camera-fill me-2"></i>2. Foto Wajah (Face Recognition)
+                                <span class="badge bg-light text-primary ms-1" id="editPhotoCountBadge">0</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="editStudentTabContent">
+                        <!-- TAB 1: DATA MAHASISWA -->
+                        <div class="tab-pane fade show active" id="tab-data-content" role="tabpanel">
+                            <div id="editDataAlertContainer"></div>
+                            
+                            <form id="editStudentForm" onsubmit="submitEditStudentData(event)">
+                                <input type="hidden" id="edit_student_pk" name="student_pk">
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="edit_student_id" class="form-label fw-bold">NIM <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="edit_student_id" name="student_id" required>
+                                        <small class="text-muted">Jika NIM diubah, folder foto & ArcFace embedding otomatis diselaraskan.</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_name" class="form-label fw-bold">Nama Lengkap <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="edit_email" name="email">
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_phone" class="form-label">Nomor Telepon</label>
+                                        <input type="tel" class="form-control" id="edit_phone" name="phone">
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_class_year" class="form-label fw-bold">Tahun Angkatan <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="edit_class_year" name="class_year" required>
+                                            <option value="2026">2026</option>
+                                            <option value="2025">2025</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2023">2023</option>
+                                            <option value="2022">2022</option>
+                                            <option value="2021">2021</option>
+                                            <option value="2020">2020</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_program_study_id" class="form-label fw-bold">Program Studi <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="edit_program_study_id" name="program_study_id" required onchange="updateEditClassPreview()">
+                                            <option value="1">Teknik Informatika (TI)</option>
+                                            <option value="2">Sistem Informasi (SI)</option>
+                                            <option value="3">Teknik Komputer (TK)</option>
+                                            <option value="4">Ilmu Komputer (IK)</option>
+                                            <option value="5">Teknik Elektro (TE)</option>
+                                            <option value="6">Manajemen Informatika (MI)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_department" class="form-label fw-bold">Jurusan / Fakultas <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="edit_department" name="department" required>
+                                            <option value="Fakultas Teknik">Fakultas Teknik</option>
+                                            <option value="Fakultas Ilmu Komputer">Fakultas Ilmu Komputer</option>
+                                            <option value="Fakultas Teknologi Informasi">Fakultas Teknologi Informasi</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="edit_semester" class="form-label fw-bold">Semester <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="edit_semester" name="semester" required onchange="updateEditClassPreview()">
+                                            <option value="1">Semester 1</option>
+                                            <option value="2">Semester 2</option>
+                                            <option value="3">Semester 3</option>
+                                            <option value="4">Semester 4</option>
+                                            <option value="5">Semester 5</option>
+                                            <option value="6">Semester 6</option>
+                                            <option value="7">Semester 7</option>
+                                            <option value="8">Semester 8</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label for="edit_class_number" class="form-label fw-bold">Nomor Kelas <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="edit_class_number" name="class_number" required onchange="updateEditClassPreview()">
+                                            <option value="1">Kelas 1</option>
+                                            <option value="2">Kelas 2</option>
+                                            <option value="3">Kelas 3</option>
+                                            <option value="4">Kelas 4</option>
+                                            <option value="5">Kelas 5</option>
+                                            <option value="6">Kelas 6</option>
+                                            <option value="7">Kelas 7</option>
+                                            <option value="8">Kelas 8</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-8">
+                                        <label for="edit_class_preview" class="form-label fw-bold">Kode Kelas <span class="text-muted">(otomatis)</span></label>
+                                        <input type="text" class="form-control bg-light fw-bold text-primary" id="edit_class_preview" readonly>
+                                        <input type="hidden" id="edit_class_name" name="class_name">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                    <button type="submit" class="btn btn-primary" id="btnSubmitEditData">
+                                        <i class="bi bi-save me-1"></i>Simpan Perubahan Data
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- TAB 2: FOTO WAJAH (DATASET & SINKRONISASI AI) -->
+                        <div class="tab-pane fade" id="tab-photos-content" role="tabpanel">
+                            <div id="editPhotoAlertContainer"></div>
+
+                            <!-- AI Synchronization Status Banner -->
+                            <div class="card mb-3 border-0 shadow-sm" style="background: #f8fafc; border-left: 4px solid #0d6efd !important;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="mb-1 fw-bold text-dark">
+                                                <i class="bi bi-cpu me-2 text-primary"></i>Status Model Face Recognition (ArcFace)
+                                            </h6>
+                                            <div id="aiStatusBadgeContainer">
+                                                <span class="badge bg-secondary">Memeriksa...</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary fs-6" id="photoCountDisplay">0 Foto</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-muted small mt-2">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Sistem memerlukan <strong>minimal 3 foto wajah</strong> yang jelas untuk mengaktifkan pengenalan presensi. Penambahan atau penghapusan foto otomatis memperbarui model (*auto re-sync*).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload New Photos Section -->
+                            <div class="card mb-3 border border-dashed p-3 bg-light">
+                                <h6 class="fw-bold mb-2">
+                                    <i class="bi bi-cloud-arrow-up me-2 text-success"></i>Tambah Foto Wajah Baru
+                                </h6>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-8">
+                                        <input type="file" id="uploadPhotoInput" class="form-control" multiple accept="image/jpeg,image/png,image/jpg">
+                                        <small class="text-muted">Bisa memilih lebih dari 1 foto sekaligus (JPG, JPEG, PNG).</small>
+                                    </div>
+                                    <div class="col-md-4 d-grid">
+                                        <button type="button" class="btn btn-success fw-bold" id="btnUploadNewPhotos" onclick="uploadNewPhotos()">
+                                            <i class="bi bi-upload me-1"></i>Unggah & Sinkronkan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Photo Gallery Grid -->
+                            <h6 class="fw-bold mb-2 text-dark">
+                                <i class="bi bi-images me-2"></i>Daftar Foto Tersimpan di Server
+                            </h6>
+                            
+                            <div id="photoGalleryLoading" class="text-center py-4" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span class="ms-2 text-muted">Menyinkronkan galeri...</span>
+                            </div>
+
+                            <div class="row g-3" id="photoGalleryContainer">
+                                <!-- Cards populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Lightbox Preview Modal -->
+<div class="modal fade" id="photoPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="photoPreviewTitle">Preview Foto</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-2">
+                <img id="photoPreviewImg" src="" class="img-fluid rounded" style="max-height: 70vh; object-fit: contain;">
             </div>
         </div>
     </div>
@@ -425,6 +659,340 @@ function confirmDelete(studentId, studentName) {
     document.getElementById('studentName').textContent = studentName;
     document.getElementById('deleteLink').href = `/mahasiswa/hapus/${studentId}`;
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// ==========================================
+// EDIT MAHASISWA & FACE PHOTO MANAGEMENT
+// ==========================================
+let currentEditingStudentId = null;
+let currentEditingNIM = null;
+
+const prodiAbbreviations = {
+    '1': 'TI',
+    '2': 'SI',
+    '3': 'TK',
+    '4': 'IK',
+    '5': 'TE',
+    '6': 'MI'
+};
+
+function updateEditClassPreview() {
+    const prodiId = document.getElementById('edit_program_study_id').value;
+    const semester = document.getElementById('edit_semester').value;
+    const classNum = document.getElementById('edit_class_number').value;
+    
+    if (prodiId && semester && classNum) {
+        const abbr = prodiAbbreviations[prodiId] || 'TI';
+        const code = semester + abbr + classNum;
+        document.getElementById('edit_class_preview').value = code;
+        document.getElementById('edit_class_name').value = code;
+    }
+}
+
+async function openEditModal(studentId) {
+    currentEditingStudentId = studentId;
+    
+    // Clear alerts
+    document.getElementById('editDataAlertContainer').innerHTML = '';
+    document.getElementById('editPhotoAlertContainer').innerHTML = '';
+    
+    // Reset tabs to Tab 1
+    const tabDataBtn = document.getElementById('tab-data-btn');
+    if (tabDataBtn) {
+        new bootstrap.Tab(tabDataBtn).show();
+    }
+    
+    // Show loading
+    document.getElementById('editModalLoading').style.display = 'block';
+    document.getElementById('editModalContent').style.display = 'none';
+    
+    const editModalEl = document.getElementById('editStudentModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(editModalEl);
+    modalInstance.show();
+    
+    try {
+        const response = await fetch(`/api/mahasiswa/${studentId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert(data.message || 'Gagal mengambil data mahasiswa');
+            modalInstance.hide();
+            return;
+        }
+        
+        const s = data.student;
+        currentEditingNIM = s.student_id;
+        
+        // Populate Form Fields
+        document.getElementById('edit_student_pk').value = s.id;
+        document.getElementById('edit_student_id').value = s.student_id || '';
+        document.getElementById('edit_name').value = s.name || '';
+        document.getElementById('edit_email').value = s.email || '';
+        document.getElementById('edit_phone').value = s.phone || '';
+        
+        if (s.class_year) {
+            document.getElementById('edit_class_year').value = s.class_year;
+        }
+        if (s.program_study_id) {
+            document.getElementById('edit_program_study_id').value = s.program_study_id;
+        }
+        if (s.department) {
+            document.getElementById('edit_department').value = s.department;
+        }
+        if (s.semester) {
+            document.getElementById('edit_semester').value = s.semester;
+        }
+        if (s.class_number) {
+            document.getElementById('edit_class_number').value = s.class_number;
+        }
+        
+        // Update class code
+        document.getElementById('edit_class_preview').value = s.class_name || '';
+        document.getElementById('edit_class_name').value = s.class_name || '';
+        if (!s.class_name) {
+            updateEditClassPreview();
+        }
+        
+        // Render Photo Gallery
+        renderPhotoGallery(data.photos || [], data.photo_count || 0, s.face_registered);
+        
+        // Show Content
+        document.getElementById('editModalLoading').style.display = 'none';
+        document.getElementById('editModalContent').style.display = 'block';
+        
+    } catch (err) {
+        console.error('Error fetching student data:', err);
+        alert('Terjadi kesalahan jaringan saat mengambil data.');
+        modalInstance.hide();
+    }
+}
+
+function renderPhotoGallery(photos, count, isRegistered) {
+    document.getElementById('editPhotoCountBadge').textContent = count;
+    document.getElementById('photoCountDisplay').textContent = `${count} Foto Tersimpan`;
+    
+    // Status Badge
+    const statusContainer = document.getElementById('aiStatusBadgeContainer');
+    if (count >= 3) {
+        statusContainer.innerHTML = `
+            <span class="badge bg-success fs-6">
+                <i class="bi bi-shield-check me-1"></i>Face Recognition Aktif (ArcFace Synced)
+            </span>
+        `;
+    } else {
+        statusContainer.innerHTML = `
+            <span class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>Kurang dari 3 Foto (Model Nonaktif Sementara)
+            </span>
+        `;
+    }
+    
+    // Gallery Cards
+    const galleryContainer = document.getElementById('photoGalleryContainer');
+    if (!photos || photos.length === 0) {
+        galleryContainer.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-image" style="font-size: 3rem;"></i>
+                <p class="mt-2 mb-0">Belum ada foto wajah yang tersimpan untuk mahasiswa ini.</p>
+                <small>Silakan unggah minimal 3 foto wajah jelas di atas.</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    photos.forEach((photo, idx) => {
+        html += `
+            <div class="col-6 col-md-4 col-lg-3" id="photoCard_${idx}">
+                <div class="card h-100 shadow-sm border position-relative">
+                    <img src="${photo.url}" 
+                         class="card-img-top" 
+                         style="height: 140px; object-fit: cover; cursor: pointer;" 
+                         alt="${photo.filename}"
+                         onclick="previewPhoto('${photo.url}', '${photo.filename}')"
+                         title="Klik untuk melihat ukuran penuh">
+                    <div class="card-body p-2 text-center">
+                        <small class="d-block text-truncate text-muted" style="font-size: 11px;" title="${photo.filename}">
+                            ${photo.filename}
+                        </small>
+                        <div class="mt-2 d-flex justify-content-center gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-info p-1" 
+                                    onclick="previewPhoto('${photo.url}', '${photo.filename}')" title="Lihat Foto">
+                                <i class="bi bi-zoom-in"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger p-1" 
+                                    onclick="deleteStudentPhoto('${photo.filename}')" title="Hapus Foto">
+                                <i class="bi bi-trash"></i> Hapus
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    galleryContainer.innerHTML = html;
+}
+
+function previewPhoto(url, filename) {
+    document.getElementById('photoPreviewTitle').textContent = filename;
+    document.getElementById('photoPreviewImg').src = url;
+    new bootstrap.Modal(document.getElementById('photoPreviewModal')).show();
+}
+
+async function uploadNewPhotos() {
+    const input = document.getElementById('uploadPhotoInput');
+    if (!input.files || input.files.length === 0) {
+        showPhotoAlert('warning', 'Pilih minimal satu file foto terlebih dahulu.');
+        return;
+    }
+    
+    const btn = document.getElementById('btnUploadNewPhotos');
+    const originalBtnHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mengunggah & Menyinkronkan...';
+    
+    const formData = new FormData();
+    for (let i = 0; i < input.files.length; i++) {
+        formData.append('photos', input.files[i]);
+    }
+    
+    try {
+        const response = await fetch(`/api/mahasiswa/${currentEditingStudentId}/upload_photos`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showPhotoAlert('success', `✅ ${data.message}`);
+            input.value = '';
+            renderPhotoGallery(data.photos, data.photo_count, data.face_recognition_synced);
+        } else {
+            showPhotoAlert('danger', `❌ ${data.message || 'Gagal mengunggah foto.'}`);
+        }
+    } catch (err) {
+        console.error('Upload error:', err);
+        showPhotoAlert('danger', 'Terjadi kesalahan jaringan saat mengunggah foto.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    }
+}
+
+async function deleteStudentPhoto(filename) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus foto "${filename}"? Model Face Recognition akan otomatis disinkronkan ulang.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/mahasiswa/${currentEditingStudentId}/delete_photo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filename: filename })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            const alertType = data.status === 'insufficient' ? 'warning' : 'success';
+            showPhotoAlert(alertType, `✅ ${data.message}`);
+            renderPhotoGallery(data.photos, data.photo_count, data.status === 'synced');
+        } else {
+            showPhotoAlert('danger', `❌ ${data.message || 'Gagal menghapus foto.'}`);
+        }
+    } catch (err) {
+        console.error('Delete photo error:', err);
+        showPhotoAlert('danger', 'Terjadi kesalahan jaringan saat menghapus foto.');
+    }
+}
+
+async function submitEditStudentData(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('btnSubmitEditData');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
+    
+    const form = document.getElementById('editStudentForm');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch(`/mahasiswa/edit/${currentEditingStudentId}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showDataAlert('success', `✅ ${data.message}`);
+            
+            // Update table row in DOM dynamically
+            const updatedNIM = document.getElementById('edit_student_id').value;
+            const updatedName = document.getElementById('edit_name').value;
+            const updatedEmail = document.getElementById('edit_email').value;
+            const updatedPhone = document.getElementById('edit_phone').value;
+            const updatedYear = document.getElementById('edit_class_year').value;
+            const updatedSemester = document.getElementById('edit_semester').value;
+            const updatedDept = document.getElementById('edit_department').value;
+            const updatedClass = document.getElementById('edit_class_name').value;
+            
+            // Find row by old NIM
+            const row = document.querySelector(`tr[data-nim="${currentEditingNIM}"]`);
+            if (row) {
+                row.setAttribute('data-nim', updatedNIM);
+                row.setAttribute('data-nama', updatedName);
+                row.setAttribute('data-angkatan', updatedYear);
+                row.setAttribute('data-semester', updatedSemester);
+                row.setAttribute('data-jurusan', updatedDept);
+                row.setAttribute('data-kelas', updatedClass);
+                
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 10) {
+                    cells[0].innerHTML = `<strong>${updatedNIM}</strong>`;
+                    cells[1].textContent = updatedName;
+                    cells[2].innerHTML = updatedEmail ? `<a href="mailto:${updatedEmail}" class="text-decoration-none">${updatedEmail}</a>` : '<span class="text-muted">-</span>';
+                    cells[3].textContent = updatedPhone || '-';
+                    cells[4].innerHTML = `<span class="badge bg-info">${updatedYear}</span>`;
+                    cells[6].innerHTML = `<span class="badge bg-warning">Semester ${updatedSemester}</span>`;
+                    cells[7].innerHTML = `<small class="text-primary">${updatedDept}</small>`;
+                    cells[8].innerHTML = `<span class="badge bg-secondary">${updatedClass}</span>`;
+                }
+            }
+            currentEditingNIM = updatedNIM;
+            
+        } else {
+            showDataAlert('danger', `❌ ${data.message || 'Gagal menyimpan perubahan.'}`);
+        }
+    } catch (err) {
+        console.error('Submit error:', err);
+        showDataAlert('danger', 'Terjadi kesalahan jaringan saat menyimpan data.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
+
+function showDataAlert(type, message) {
+    document.getElementById('editDataAlertContainer').innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+}
+
+function showPhotoAlert(type, message) {
+    document.getElementById('editPhotoAlertContainer').innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
 }
 </script>
 {% endblock %}

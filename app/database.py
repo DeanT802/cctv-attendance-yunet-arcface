@@ -183,9 +183,33 @@ class Database:
         return self.execute_query(query, params)
     
     def get_student_by_id(self, student_id):
-        query = "SELECT * FROM students WHERE id = %s"
+        query = """
+        SELECT s.*, ps.name as program_study_name 
+        FROM students s 
+        LEFT JOIN program_studies ps ON s.program_study_id = ps.id 
+        WHERE s.id = %s
+        """
         result = self.execute_query(query, (student_id,))
         return result[0] if result else None
+
+    def update_student(self, student_id_pk, student_id_nim, name, email, phone, class_year, program_study_id, department, semester, class_number, class_name):
+        query = """
+        UPDATE students 
+        SET student_id = %s,
+            name = %s,
+            email = %s,
+            phone = %s,
+            class_year = %s,
+            program_study_id = %s,
+            department = %s,
+            semester = %s,
+            class_number = %s,
+            class_name = %s,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s
+        """
+        params = (student_id_nim, name, email, phone, class_year, program_study_id, department, semester, class_number, class_name, student_id_pk)
+        return self.execute_query(query, params)
     
     def delete_student(self, student_id):
         query = "DELETE FROM students WHERE id = %s"
