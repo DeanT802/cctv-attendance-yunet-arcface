@@ -1,195 +1,258 @@
-# Sistem Presensi Mahasiswa
+# Smart Class Attendance System (YuNet + ArcFace)
 
-Aplikasi web untuk mengelola presensi mahasiswa menggunakan Python Flask, MySQL, dan Bootstrap 5.
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/DeanT802/cctv-attendance-yunet-arcface)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/framework-Flask%202.3.3-green.svg)](https://flask.palletsprojects.com/)
+[![OpenCV](https://img.shields.io/badge/vision-OpenCV%20%7C%20InsightFace-orange.svg)](https://github.com/deepinsight/insightface)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-## Fitur
+Sistem presensi mahasiswa otomatis berbasis **Computer Vision** dan **Deep Learning** yang mengintegrasikan streaming kamera jaringan (**RTSP IP Camera CCTV**) dan kamera lokal (**Webcam**). Dirancang khusus untuk ruang perkuliahan modern (*Smart Class*) dengan kemampuan mengenali banyak wajah sekaligus (*Multiple Check-in*), adaptif terhadap variasi pencahayaan dan silau (*backlight*), serta dilengkapi manajemen sesi presensi berkala (*checkpoints*) dan pelaporan akademik komprehensif.
 
-1. **Halaman Login** - Autentikasi pengguna
-2. **Dashboard Presensi** dengan:
-   - Statistik jumlah mahasiswa
-   - Daftar jadwal per kelas  
-   - Jumlah mata kuliah
-   - Jumlah dosen pengampu
-   - Grafik persentase kehadiran per kelas
-3. **Manajemen Mahasiswa** dengan:
-   - Daftar semua mahasiswa
-   - Form tambah mahasiswa baru
-   - Hapus data mahasiswa
-   - Validasi data dan notifikasi
+---
 
-## Teknologi
+## Arsitektur Pipeline Visi Komputer
 
-- **Backend**: Python Flask
-- **Database**: MySQL
-- **Frontend**: Bootstrap 5, Chart.js
-- **Icons**: Bootstrap Icons
-
-## Struktur Project
-
+```text
+[ RTSP IP Camera (Ezviz/CCTV) / Webcam ]
+                   │
+                   ▼
+     [ Zero-Latency Frame Buffer ]  <-- Multi-threading Worker (Latest Frame)
+                   │
+                   ▼
+     [ Normalisasi Kontras CLAHE ]  <-- Ekualisasi Adaptif Kanal L (LAB Space)
+                   │
+                   ▼
+     [ Deteksi Wajah CNN YuNet ]    <-- Bounding Box & 5-Point Facial Landmarks
+                   │
+                   ▼
+   [ Face Alignment & Pre-process ]
+                   │
+                   ▼
+     [ Ekstraksi Fitur ArcFace ]    <-- Deep Representation (512-D Embedding Vector)
+                   │
+                   ▼
+   [ Cosine Similarity Matching ]   <-- Threshold Similarity (Cosine >= 0.55)
+                   │
+                   ▼
+   [ Asynchronous Attendance Log ]  <-- Debounce Anti-Duplicate & MySQL Update
 ```
+
+---
+
+## Fitur Utama
+
+### 1. Computer Vision & Pengenalan Wajah Mutakhir
+- **Deteksi Cepat YuNet**: Model CNN ONNX berbobot ringan dengan latensi deteksi < 15 ms per frame.
+- **Ekstraksi Biometrik ArcFace**: Representasi fitur fasial 512-dimensi (*ResNet-50 backbone*) dengan variansi pemisah antarkelas yang tinggi.
+- **Normalisasi CLAHE**: Mengeliminasi efek *backlight* jendela dan pencahayaan redup, meningkatkan akurasi hingga +26,8% pada kondisi silau ekstrem.
+- **Akselerasi Inferensi**: Mendukung eksekusi ONNX Runtime dengan akselerasi GPU (DirectML / CUDA) serta fallback CPU.
+
+### 2. Transmisi Kamera IP & Zero-Latency Buffer
+- **Multi-source Support**: Kompatibel dengan RTSP IP Camera (Ezviz C6N, Hikvision, Dahua) maupun webcam lokal.
+- **Buffer Management Multi-threading**: Thread latar belakang secara kontinu membuang frame tertumpuk, menjaga latensi video streaming tetap stabil di ~120 ms tanpa video lag.
+
+### 3. Presensi Otomatis & Multiple Check-in
+- **Simultaneous Recognition**: Mampu mendeteksi dan mengidentifikasi hingga 5 mahasiswa sekaligus dalam satu frame dengan latensi total < 75 ms (~13–28 FPS).
+- **Sesi Presensi Berbasis Checkpoint**: Sesi perkuliahan dapat dibagi menjadi checkpoint berkala untuk memastikan kedisiplinan mahasiswa sepanjang jam kuliah.
+- **Status Deteksi Real-Time**: Umpan balik visual interaktif meliputi timer inferensi AI, status verifikasi kehadiran, kartu identitas mahasiswa terverifikasi dengan foto profil dan skor *confidence* (%), serta riwayat presensi harian.
+- **Debounce Suppression**: Mencegah pencatatan presensi ganda (*anti-spam*) saat mahasiswa berada di depan kamera dalam durasi lama.
+
+### 4. Manajemen Entitas & Dataset Biometrik
+- **Master Data Mahasiswa & Dosen**: Registrasi, pembaruan, dan pemfilteran data akademik lengkap dengan validasi pencegahan duplikasi NIM.
+- **Kelola Foto Wajah & Auto-sync**: Antarmuka unggah foto multi-sudut (*dataset* profil) yang otomatis mengekstrak vektor dan menyinkronkan model (`arcface_embeddings.pkl`).
+- **Penjadwalan Perkuliahan**: Pemetaan relasi dosen pengajar, mata kuliah, kelas, hari, jam, dan ruang Smart Class.
+- **Presensi Bebas / Uji Coba Wajah**: Modul verifikasi mandiri bagi mahasiswa untuk menguji keterbacaan wajah sebelum sesi perkuliahan dimulai.
+- **Panel Intervensi Presensi Manual**: Fasilitas korektif bagi dosen pengajar untuk mengubah status kehadiran (Hadir, Tidak Hadir, Terlambat, Izin) jika diperlukan.
+- **Pelaporan Akademik Terstandarisasi**: Rekapitulasi presensi semester format cetak resmi (PDF dan lembar kerja Excel) lengkap dengan lembar pengesahan.
+
+### 5. Antarmuka Pengguna Modern (v1.1.0)
+- Desain *Claude Warm Editorial* yang nyaman dipandang, elegan, dan bersih.
+- Tipografi berkualitas tinggi menggunakan font **Newsreader** (Heading) dan **Plus Jakarta Sans** (Body & UI).
+- Tata letak responsif berbasis Bootstrap 5 dengan komponen formulir, kartu analitik, dan tabel interaktif.
+
+---
+
+## Tech Stack
+
+| Komponen | Teknologi / Library |
+|---|---|
+| **Backend Framework** | Python 3.10+, Flask 2.3.3 |
+| **Computer Vision** | OpenCV 4.8+, InsightFace 0.7.3 (ArcFace ResNet-50), YuNet ONNX |
+| **Inference Engine** | ONNX Runtime (DirectML / CPU Execution Provider) |
+| **Basis Data** | MySQL Server 8.0+ via `mysql-connector-python` |
+| **Frontend** | HTML5, Vanilla CSS3 (Custom Design System), Bootstrap 5, Chart.js |
+| **Keamanan** | Bcrypt password hashing, session-based authentication |
+
+---
+
+## Struktur Direktori
+
+```text
 DEAD/
 ├── app/
-│   ├── __init__.py          # Konfigurasi Flask app
-│   ├── routes.py            # Route handlers
-│   ├── database.py          # Database connection dan queries
-│   ├── templates/           # HTML templates
-│   │   ├── base.html        # Base template
-│   │   ├── login.html       # Halaman login
-│   │   └── dashboard.html   # Dashboard utama
-│   └── static/              # Static files (CSS, JS)
+│   ├── __init__.py                 # Inisialisasi Flask application & konfigurasi
+│   ├── routes.py                   # Handler rute utama (Auth, Dashboard, Mahasiswa, Jadwal, Laporan)
+│   ├── face_recognition_routes.py  # Handler rute presensi, live recognition, stream & polling
+│   ├── database.py                 # Abstraksi koneksi dan transaksi basis data MySQL
+│   ├── camera_discovery.py         # Utilitas deteksi kamera lokal dan profil RTSP
+│   ├── face_recognition/           # Engine Computer Vision
+│   │   ├── arcface_recognition.py  # Pipeline ekstraksi ArcFace, CLAHE, dan cosine matching
+│   │   ├── yunet_detector.py       # Wrapper deteksi wajah YuNet ONNX
+│   │   ├── face_aligner.py         # Normalisasi landmark fasial 5 titik
+│   │   └── config.py               # Konfigurasi parameter ambang batas pengenalan
+│   ├── static/
+│   │   ├── css/styles.css          # Master stylesheet (Claude Warm Editorial design tokens)
+│   │   └── js/                     # Skrip interaksi frontend dan polling AJAX
+│   └── templates/                  # Template HTML Jinja2
+│       ├── base.html               # Master layout
+│       ├── login.html              # Halaman login
+│       ├── dashboard.html          # Halaman dashboard analitik
+│       ├── mahasiswa.html          # Manajemen data mahasiswa & modal kelola foto wajah
+│       ├── jadwal.html             # Manajemen penjadwalan kuliah
+│       ├── ambil_presensi.html     # Sesi presensi kelas, IP Cam stream, & live detection status
+│       ├── presensi_face.html      # Halaman uji coba presensi wajah mandiri
+│       └── laporan_presensi.html   # Rekapitulasi dan pratinjau cetak laporan
 ├── database/
-│   └── schema.sql          # Database schema dan sample data
-├── requirements.txt        # Python dependencies
-├── .env                   # Environment variables
-└── run.py                # Entry point aplikasi
+│   └── schema.sql                  # Skema database relasional & data awal
+├── models/
+│   ├── face_detection_yunet_*.onnx # Model deteksi wajah YuNet
+│   └── arcface_embeddings.pkl      # Penyimpanan vektor embedding biometrik mahasiswa
+├── uploads/
+│   └── faces/                      # Direktori penyimpanan foto dataset per NIM
+├── config/                         # File konfigurasi aplikasi
+├── requirements.txt                # Dependensi Python utama
+├── .env.example                    # Contoh variabel lingkungan
+├── run.py                          # Entry point aplikasi Flask
+└── README.md                       # Dokumentasi proyek
 ```
 
-## Instalasi
+---
 
-### 1. Clone Repository
+## Panduan Instalasi & Menjalankan Sistem
 
+### 1. Prasyarat Sistem
+- **Python**: Versi 3.10 atau lebih baru
+- **MySQL Server**: Versi 8.0 atau lebih baru
+- **Git**: Untuk cloning repositori
+- **Kamera**: Webcam USB/bawaan laptop atau Kamera IP dengan protokol RTSP (misal Ezviz C6N) pada jaringan yang sama
+
+### 2. Kloning Repositori & Setup Virtual Environment
 ```bash
-git clone <repository-url>
-cd DEAD
+git clone https://github.com/DeanT802/cctv-attendance-yunet-arcface.git
+cd cctv-attendance-yunet-arcface/DEAD
+
+# Membuat virtual environment
+python -m venv .venv
+
+# Mengaktifkan virtual environment
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (CMD):
+.venv\Scripts\activate.bat
+# Linux / macOS:
+source .venv/bin/activate
 ```
 
-### 2. Setup Python Environment
-
+### 3. Instalasi Dependensi Python
 ```bash
-# Buat virtual environment
-python -m venv venv
-
-# Aktifkan virtual environment
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-
-# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Setup MySQL Database
+> **Catatan Dependensi Vision**: Paket `insightface`, `onnxruntime`, dan `opencv-python` akan otomatis mengunduh model pembantu yang dibutuhkan saat pertama kali dieksekusi.
 
-1. Install MySQL Server
-2. Buat database baru:
+### 4. Konfigurasi Basis Data MySQL
+1. Buat database baru di MySQL Server:
+   ```sql
+   CREATE DATABASE student_attendance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+2. Impor skema tabel dan data awal:
+   ```bash
+   mysql -u root -p student_attendance < database/schema.sql
+   ```
 
-```sql
-CREATE DATABASE student_attendance;
-```
-
-3. Import schema dan sample data:
-
+### 5. Konfigurasi File Environment (`.env`)
+Salin file `.env.example` menjadi `.env`, lalu sesuaikan kredensial database dan parameter kamera:
 ```bash
-mysql -u root -p student_attendance < database/schema.sql
+copy .env.example .env
 ```
 
-### 4. Konfigurasi Environment
-
-Edit file `.env` sesuai dengan konfigurasi MySQL Anda:
-
+Sesuaikan isi `.env`:
 ```env
 # Database Configuration
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_mysql_password
 DB_NAME=student_attendance
+SECRET_KEY=generate_a_secure_random_key
 
-# Flask Configuration
-SECRET_KEY=your-secret-key-here
-FLASK_ENV=development
+# Upload Directory
+UPLOAD_FOLDER=uploads
+
+# RTSP IP Camera Configuration (Sesuaikan IP & Kredensial Kamera CCTV)
+RTSP_URL=rtsp://admin:verification_code@192.168.1.10:554/h264/ch1/main/av_stream
+
+# Face Recognition Parameters
+FACE_MATCH_DISTANCE_THRESHOLD=0.55
+ARCFACE_EMBEDDINGS_FILE=arcface_embeddings.pkl
 ```
 
-### 5. Jalankan Aplikasi
- 
+### 6. Menjalankan Aplikasi
+Jalankan server pengembangan Flask:
 ```bash
 python run.py
 ```
 
-Aplikasi akan berjalan di `http://localhost:5000`
+Aplikasi web dapat diakses melalui peramban di:
+`http://127.0.0.1:5000`
 
-## Login Demo
+---
 
-- **Username**: `admin`
-- **Password**: `password`
+## Kredensial Demo Masuk
 
-## Screenshot Dashboard
+| Peran (Role) | Username / Email | Password Default | Hak Akses |
+|---|---|---|---|
+| **Administrator** | `admin` | `password` | Akses penuh seluruh master data, jadwal, sinkronisasi foto wajah, dan laporan |
+| **Dosen Pengajar** | `dosen` | `password` | Inisiasi sesi presensi kelas, koreksi manual, dan unduh rekapitulasi kehadiran |
 
-Dashboard menampilkan:
-- **Kartu Statistik**: Total mahasiswa, mata kuliah, dosen, dan jadwal
-- **Tabel Jadwal**: Daftar jadwal per kelas dengan detail mata kuliah, waktu, dan dosen
-- **Grafik Kehadiran**: Bar chart persentase kehadiran per kelas
-- **Tabel Statistik**: Detail statistik kehadiran dengan progress bar
+---
 
-## Database Schema
+## Parameter Konfigurasi Pengenalan Wajah (`.env`)
 
-### Tables:
-- `students` - Data mahasiswa
-- `teachers` - Data dosen
-- `courses` - Data mata kuliah
-- `schedules` - Jadwal kuliah
-- `class_enrollments` - Pendaftaran mahasiswa ke kelas
-- `attendance` - Record presensi
-- `users` - User authentication
+| Variabel | Default | Penjelasan |
+|---|---|---|
+| `FACE_MATCH_DISTANCE_THRESHOLD` | `0.55` | Ambang batas kemiripan kosinus (*Cosine Similarity*). Nilai lebih tinggi meningkatkan ketatnya pencocokan. |
+| `RTSP_URL` | - | URL stream video RTSP dari kamera IP CCTV. |
+| `RECOGNITION_BURST_ENABLED` | `true` | Mengaktifkan pengambilan beberapa frame untuk verifikasi konsistensi wajah. |
+| `ARCFACE_EMBEDDINGS_FILE` | `arcface_embeddings.pkl` | Nama berkas penyimpanan cache vektor biometrik di folder `models/`. |
 
-### Sample Data:
-- 10 mahasiswa (TI dan SI)
-- 5 dosen
-- 7 mata kuliah
-- 7 jadwal kelas
-- Sample attendance records
+---
 
-## API Endpoints
+## Catatan Rilis
 
-- `GET /` - Redirect ke dashboard atau login
-- `GET /login` - Halaman login
-- `POST /login` - Proses login
-- `GET /logout` - Logout
-- `GET /dashboard` - Dashboard utama
-- `GET /mahasiswa` - Halaman daftar mahasiswa
-- `GET /mahasiswa/tambah` - Form tambah mahasiswa
-- `POST /mahasiswa/tambah` - Proses tambah mahasiswa
-- `GET /mahasiswa/hapus/<id>` - Hapus mahasiswa
-- `GET /api/attendance-chart` - Data untuk grafik kehadiran (JSON)
+### Versi 1.1.0 (Terbaru)
+- **UI/UX Overhaul**: Penerapan palet warna *Claude Warm Editorial* (`#F8EDE3`, `#DFD3C3`, `#D0B8A8`, `#7D6E83`) pada seluruh modul antarmuka.
+- **Status Deteksi Real-Time**: Penambahan kotak status deteksi interaktif pada halaman presensi kelas (`ambil_presensi.html`), dilengkapi indikator proses AI, live timer, kartu pengenalan mahasiswa, dan riwayat presensi.
+- **Manajemen Foto Mahasiswa**: Integrasi modal edit profil mahasiswa dengan galeri foto multi-sudut dan sinkronisasi otomatis ke `arcface_embeddings.pkl`.
+- **Optimalisasi Sinkronisasi Model**: Penanganan otomatis pembaruan embedding saat foto profil mahasiswa ditambah atau dihapus.
 
-## Development
+### Versi 1.0.0
+- Rilis perdana sistem presensi berbasis YuNet dan ArcFace.
+- Integrasi streaming RTSP Kamera IP Ezviz C6N dan webcam lokal.
+- Fitur Multiple Check-in simultan dan penanganan normalisasi kontras CLAHE.
+- Ekspor laporan rekapitulasi kehadiran ke format PDF dan Excel.
 
-### Menambah Route Baru
+---
 
-Edit file `app/routes.py` untuk menambah endpoint baru.
+## Lisensi
 
-### Menambah Template
+Proyek ini didistribusikan di bawah lisensi **MIT License**. Lihat berkas [LICENSE](LICENSE) untuk informasi lebih lanjut.
 
-Tambahkan file HTML baru di folder `app/templates/` dengan extends `base.html`.
+---
 
-### Database Queries
+## Penulis & Kontribusi
 
-Edit file `app/database.py` untuk menambah query database baru.
-
-## Troubleshooting
-
-### Database Connection Error
-- Pastikan MySQL server berjalan
-- Periksa konfigurasi di file `.env`
-- Pastikan database `student_attendance` sudah dibuat
-
-### Import Error
-- Pastikan virtual environment sudah diaktifkan
-- Install ulang dependencies: `pip install -r requirements.txt`
-
-### Port Already in Use
-- Ganti port di `run.py`: `app.run(debug=True, port=5001)`
-
-## Benchmark Akurasi (Lighting)
-
-Untuk mengukur akurasi berdasarkan pencahayaan, gunakan script:
-
-```bash
-python benchmark_face_recognition.py --dataset datasets/benchmark
-```
-
-Panduan lengkap ada di `Doc/ACCURACY_BENCHMARK_GUIDE.md`.
-
-## License
-
-MIT License
+- **Dean Rama Prananta** (NIM: 22024151)
+- Program Studi Sarjana Terapan (D4) Teknik Informatika
+- Jurusan Teknik Elektro, **Politeknik Negeri Manado**
+- Dosen Pembimbing: **Harson Kapoh, S.T., M.T.**
